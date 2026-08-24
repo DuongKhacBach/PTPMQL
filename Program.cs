@@ -20,7 +20,6 @@ app.UseRouting();
 
 app.UseAuthorization();
 
-// Định tuyến mặc định tới DemoController -> Index
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Demo}/{action=Index}/{id?}");
