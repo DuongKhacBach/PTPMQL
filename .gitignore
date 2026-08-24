@@ -11,6 +11,9 @@
 
 ## Logs
 *.log
+publish/
+publish.zip
+
 
 ## OS Files
 .DS_Store
