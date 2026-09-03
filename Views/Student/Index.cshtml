@@ -1,7 +1,57 @@
 @{
-    ViewData["Title"] = "Student Index";
+    ViewData["Title"] = "View Index StudentController";
 }
 
-<div class="text-center mt-5">
-    <h2 class="display-6">View Index của StudentController</h2>
+<div class="container mt-4">
+    <h2 class="mb-3">View Index StudentController</h2>
+    <ul class="text-muted mb-4">
+        <li>1. Tạo form để gửi dữ liệu từ view lên controller</li>
+        <li>2. Controller nhận dữ liệu từ view gửi lên và xử lý</li>
+        <li>3. Hiển thị kết quả sau khi xử lý</li>
+    </ul>
+
+    <form asp-action="Index" method="post" class="p-4 border rounded shadow-sm bg-light" style="max-width: 600px;">
+        <div class="mb-3">
+            <label for="fullName" class="form-label fw-bold">Họ tên:</label>
+            <input type="text" class="form-control" id="fullName" name="fullName" placeholder="Nhập họ tên" value="@ViewBag.FullName" required />
+        </div>
+
+        <div class="mb-3">
+            <label for="address" class="form-label fw-bold">Địa chỉ:</label>
+            <input type="text" class="form-control" id="address" name="address" placeholder="Nhập địa chỉ" value="@ViewBag.Address" required />
+        </div>
+
+        <div class="mb-3">
+            <label for="school" class="form-label fw-bold">Trường:</label>
+            <input type="text" class="form-control" id="school" name="school" placeholder="Nhập tên trường" value="@ViewBag.School" required />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label fw-bold d-block">Giới tính:</label>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="gender" id="genderNam" value="Nam" @(ViewBag.Gender == "Nữ" ? "" : "checked") />
+                <label class="form-check-label" for="genderNam">Nam</label>
+            </div>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="gender" id="genderNu" value="Nữ" @(ViewBag.Gender == "Nữ" ? "checked" : "") />
+                <label class="form-check-label" for="genderNu">Nữ</label>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Gửi dữ liệu</button>
+    </form>
+
+    @if (ViewBag.Message != null)
+    {
+        <div class="alert alert-success mt-4" style="max-width: 600px;">
+            <h5 class="alert-heading fw-bold">Kết quả sau khi xử lý:</h5>
+            <hr />
+            <p class="mb-1"><strong>Họ tên:</strong> @ViewBag.FullName</p>
+            <p class="mb-1"><strong>Địa chỉ:</strong> @ViewBag.Address</p>
+            <p class="mb-1"><strong>Trường:</strong> @ViewBag.School</p>
+            <p class="mb-1"><strong>Giới tính:</strong> @ViewBag.Gender</p>
+            <hr />
+            <p class="mb-0 text-success fw-bold">@ViewBag.thongBao</p>
+        </div>
+    }
 </div>
