@@ -29,22 +29,27 @@ jobs:
 
       - name: Deploy to MonsterASP via WebDeploy
         shell: pwsh
+        env:
+          WEBSITE_NAME: ${{ secrets.WEBSITE_NAME }}
+          SERVER_COMPUTER_NAME: ${{ secrets.SERVER_COMPUTER_NAME }}
+          SERVER_USERNAME: ${{ secrets.SERVER_USERNAME }}
+          SERVER_PASSWORD: ${{ secrets.SERVER_PASSWORD }}
         run: |
           $msdeploy = "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe"
           if (-not (Test-Path $msdeploy)) {
             $msdeploy = "C:\Program Files (x86)\IIS\Microsoft Web Deploy V3\msdeploy.exe"
           }
-          if (-not (Test-Path $msdeploy)) {
-            throw "msdeploy.exe not found on runner."
-          }
 
-          $siteName = "${{ secrets.WEBSITE_NAME }}".Trim()
-          $server = "${{ secrets.SERVER_COMPUTER_NAME }}".Trim().TrimEnd('/')
-          $user = "${{ secrets.SERVER_USERNAME }}".Trim()
-          $pass = "${{ secrets.SERVER_PASSWORD }}".Trim()
+          $siteName = $env:WEBSITE_NAME.Trim()
+          $server = $env:SERVER_COMPUTER_NAME.Trim().TrimEnd('/')
+          $user = $env:SERVER_USERNAME.Trim()
+          $pass = $env:SERVER_PASSWORD.Trim()
 
           if (-not $siteName -or -not $server -or -not $user -or -not $pass) {
-            throw "Missing one or more required secrets (WEBSITE_NAME, SERVER_COMPUTER_NAME, SERVER_USERNAME, SERVER_PASSWORD)."
+            $msg = "Error: Mot trong 4 secret bi trong (WEBSITE_NAME, SERVER_COMPUTER_NAME, SERVER_USERNAME, SERVER_PASSWORD)."
+            Write-Error $msg
+            "### $msg" >> $env:GITHUB_STEP_SUMMARY
+            exit 1
           }
 
           # Normalize WebDeploy destination URL
@@ -52,9 +57,21 @@ jobs:
           if ($server -notmatch "/msdeploy\.axd") { $server = "$server/msdeploy.axd" }
           if ($server -notmatch "\?site=") { $server = "$server?site=$siteName" }
 
-          Write-Host "Deploying to: $server (Site: $siteName, User: $user)"
+          Write-Host "Target Server: $server"
+          Write-Host "Site Name: $siteName"
+          Write-Host "User: $user"
 
-          $destArg = "contentPath=$siteName,computerName=$server,userName=$user,password=$pass,authType=Basic"
-          $sourceArg = "contentPath=$PWD\publish"
+          $dest = "contentPath='$siteName',computerName='$server',userName='$user',password='$pass',authType='Basic'"
+          $source = "contentPath='$PWD\publish'"
 
-          & $msdeploy -verb:sync -source:$sourceArg -dest:$destArg -allowUntrusted
+          $output = & $msdeploy -verb:sync -source:$source -dest:$dest -allowUntrusted 2>&1
+          $exitCode = $LASTEXITCODE
+
+          $logText = $output | Out-String
+          Write-Host $logText
+
+          "### WebDeploy Result (Exit Code: $exitCode)`n```text`n$logText`n```" >> $env:GITHUB_STEP_SUMMARY
+
+          if ($exitCode -ne 0) {
+            exit $exitCode
+          }
