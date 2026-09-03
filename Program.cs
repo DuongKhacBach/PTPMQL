@@ -20,6 +20,17 @@ app.UseRouting();
 
 app.UseAuthorization();
 
+// Route tuy bien: /thong-tin/trang-chu
+app.MapControllerRoute(
+    name: "thongtin_trangchu",
+    pattern: "thong-tin/trang-chu",
+    defaults: new { controller = "Home", action = "Index" });
+
+app.MapControllerRoute(
+    name: "thongtin_trangchu_space",
+    pattern: "thong tin/trang chu",
+    defaults: new { controller = "Home", action = "Index" });
+
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
