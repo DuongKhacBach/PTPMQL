@@ -52,16 +52,32 @@ jobs:
             exit 1
           }
 
-          # Normalize WebDeploy destination URL
-          if ($server -notmatch "^https?://") { $server = "https://$server" }
-          if ($server -notmatch "/msdeploy\.axd") { $server = "$server/msdeploy.axd" }
-          if ($server -notmatch "\?site=") { $server = "$server?site=$siteName" }
+          # Normalize server address: strip protocol first
+          $cleanServer = $server -replace '^https?://', ''
 
-          Write-Host "Target Server: $server"
+          # If port is missing, add :8172
+          if ($cleanServer -notmatch ':[0-9]+') {
+            if ($cleanServer -match '/') {
+              $parts = $cleanServer -split '/', 2
+              $cleanServer = "$($parts[0]):8172/$($parts[1])"
+            } else {
+              $cleanServer = "$cleanServer:8172"
+            }
+          }
+
+          $destUrl = "https://$cleanServer"
+          if ($destUrl -notmatch '/msdeploy\.axd') {
+            $destUrl = "$destUrl/msdeploy.axd"
+          }
+          if ($destUrl -notmatch '\?site=') {
+            $destUrl = "$destUrl?site=$siteName"
+          }
+
+          Write-Host "Target Server URL: $destUrl"
           Write-Host "Site Name: $siteName"
           Write-Host "User: $user"
 
-          $dest = "contentPath='$siteName',computerName='$server',userName='$user',password='$pass',authType='Basic'"
+          $dest = "contentPath='$siteName',computerName='$destUrl',userName='$user',password='$pass',authType='Basic'"
           $source = "contentPath='$PWD\publish'"
 
           $output = & $msdeploy -verb:sync -source:$source -dest:$dest -allowUntrusted 2>&1
