@@ -27,11 +27,34 @@ jobs:
       - name: Publish
         run: dotnet publish --configuration Release --output ./publish
 
-      - name: Deploy via WebDeploy to MonsterASP
-        uses: rasmusbuchholdt/simply-web-deploy@2.2.0
-        with:
-          website-name: ${{ secrets.WEBSITE_NAME }}
-          server-computer-name: ${{ secrets.SERVER_COMPUTER_NAME }}
-          server-username: ${{ secrets.SERVER_USERNAME }}
-          server-password: ${{ secrets.SERVER_PASSWORD }}
-          source-path: './publish'
+      - name: Deploy to MonsterASP via WebDeploy
+        shell: pwsh
+        run: |
+          $msdeploy = "C:\Program Files\IIS\Microsoft Web Deploy V3\msdeploy.exe"
+          if (-not (Test-Path $msdeploy)) {
+            $msdeploy = "C:\Program Files (x86)\IIS\Microsoft Web Deploy V3\msdeploy.exe"
+          }
+          if (-not (Test-Path $msdeploy)) {
+            throw "msdeploy.exe not found on runner."
+          }
+
+          $siteName = "${{ secrets.WEBSITE_NAME }}".Trim()
+          $server = "${{ secrets.SERVER_COMPUTER_NAME }}".Trim().TrimEnd('/')
+          $user = "${{ secrets.SERVER_USERNAME }}".Trim()
+          $pass = "${{ secrets.SERVER_PASSWORD }}".Trim()
+
+          if (-not $siteName -or -not $server -or -not $user -or -not $pass) {
+            throw "Missing one or more required secrets (WEBSITE_NAME, SERVER_COMPUTER_NAME, SERVER_USERNAME, SERVER_PASSWORD)."
+          }
+
+          # Normalize WebDeploy destination URL
+          if ($server -notmatch "^https?://") { $server = "https://$server" }
+          if ($server -notmatch "/msdeploy\.axd") { $server = "$server/msdeploy.axd" }
+          if ($server -notmatch "\?site=") { $server = "$server?site=$siteName" }
+
+          Write-Host "Deploying to: $server (Site: $siteName, User: $user)"
+
+          $destArg = "contentPath=$siteName,computerName=$server,userName=$user,password=$pass,authType=Basic"
+          $sourceArg = "contentPath=$PWD\publish"
+
+          & $msdeploy -verb:sync -source:$sourceArg -dest:$destArg -allowUntrusted
