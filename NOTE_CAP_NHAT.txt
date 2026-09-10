@@ -1,0 +1,89 @@
+================================================================================
+                    NHẬT KÝ & TÓM TẮT CẬP NHẬT WEB - MÔN HỌC (16 TUẦN)
+================================================================================
+
+[TUẦN 1]
+- Ngày cập nhật: 
+- Nội dung tóm tắt:
+  + Khởi tạo dự án ASP.NET Core MVC.
+  + Thiết lập cấu trúc thư mục ban đầu và kết nối mã nguồn với Git/GitHub.
+  + Cấu hình môi trường phát triển ban đầu (.NET SDK, VS Code/Visual Studio).
+
+- Kiến thức & Định nghĩa cơ bản:
+  * ASP.NET Core: Nền tảng (framework) mã nguồn mở, đa nền tảng của Microsoft dùng để xây dựng các ứng dụng web hiện đại, hiệu năng cao.
+  * Git & GitHub: 
+    - Git là hệ thống quản lý phiên bản mã nguồn phân tán (VCS) chạy trên máy cá nhân.
+    - GitHub là nền tảng đám mây lưu trữ kho mã nguồn Git, hỗ trợ sao lưu và cộng tác.
+  * .NET SDK / CLI: Bộ công cụ lập trình cung cấp các lệnh (dotnet new, dotnet build, dotnet run, dotnet publish) để quản lý vòng đời dự án.
+
+--------------------------------------------------------------------------------
+
+[TUẦN 2]
+- Ngày cập nhật: 
+- Nội dung tóm tắt:
+  + Tìm hiểu cấu trúc Controller, Action, View trong mô hình MVC.
+  + Thêm DemoController và View Index cơ bản.
+  + Tùy chỉnh giao diện layout chung (Header, Footer, Navigation, _Layout.cshtml).
+
+- Kiến thức & Định nghĩa cơ bản:
+  * Mô hình MVC (Model - View - Controller):
+    - Model: Đại diện cho dữ liệu, các lớp đối tượng và quy tắc nghiệp vụ (business logic).
+    - View: Giao diện người dùng (UI), hiển thị dữ liệu ra màn hình (sử dụng cú pháp Razor .cshtml).
+    - Controller: Bộ phận trung gian tiếp nhận yêu cầu (HTTP Request), tương tác với Model và chọn View tương ứng để trả kết quả (Response).
+  * Action: Phương thức (Method) nằm trong Controller xử lý một chức năng cụ thể (ví dụ: Index(), Details(), Create()).
+  * Layout (_Layout.cshtml): Template khung giao diện dùng chung (header, menu, footer) cho toàn bộ website, giúp code giao diện không bị lặp lại.
+
+--------------------------------------------------------------------------------
+
+[TUẦN 3]
+- Ngày cập nhật: 
+- Nội dung tóm tắt:
+  + Cấu hình nâng cấp project và tối ưu tài nguyên tĩnh (assets/css/js).
+  + Thiết lập pipeline CI/CD (GitHub Actions) để tự động deploy lên hosting MonsterASP.
+  + Cấu hình WebDeploy và quản lý secret an toàn.
+
+- Kiến thức & Định nghĩa cơ bản:
+  * wwwroot (Static Files): Thư mục chứa các tệp tĩnh công khai không cần server xử lý logic (CSS, JavaScript, hình ảnh, thư viện Bootstrap/jQuery).
+  * CI/CD (Continuous Integration / Continuous Deployment):
+    - CI (Tích hợp liên tục): Tự động kiểm tra, build mã nguồn mỗi khi có commit mới.
+    - CD (Triển khai liên tục): Tự động đẩy ứng dụng sau khi build lên máy chủ/hosting.
+  * GitHub Actions (.github/workflows): Công cụ tự động hóa các quy trình (workflow) theo kịch bản YAML khi có sự kiện đẩy code lên GitHub.
+  * WebDeploy / MSDeploy: Công cụ của Microsoft hỗ trợ đóng gói và đồng bộ ứng dụng lên máy chủ web IIS / MonsterASP qua cổng bảo mật 8172.
+  * GitHub Secrets: Nơi lưu trữ an toàn các thông tin nhạy cảm (mật khẩu FTP/WebDeploy, API Key) mà không bị lộ trên mã nguồn công khai.
+
+--------------------------------------------------------------------------------
+
+[TUẦN 4]
+- Ngày cập nhật: 
+- Nội dung tóm tắt:
+  + Xây dựng Model và Form Student (FullName, Address, School, Gender).
+  + Xử lý truyền nhận dữ liệu giữa View và Controller (GET / POST).
+  + Tùy biến định tuyến (Custom Route: /thong-tin/trang-chu).
+
+- Kiến thức & Định nghĩa cơ bản:
+  * Model Binding: Cơ chế tự động chuyển đổi dữ liệu từ HTTP Request (Form inputs, Query string, Route parameters) thành các kiểu dữ liệu và đối tượng C# tương ứng.
+  * HTTP GET vs HTTP POST:
+    - HTTP GET: Phương thức dùng để yêu cầu dữ liệu từ server (ví dụ: mở trang hiển thị form trống). Dữ liệu đính kèm trên thanh địa chỉ URL.
+    - HTTP POST: Phương thức dùng để gửi dữ liệu từ form lên server để xử lý/lưu trữ. Dữ liệu được giấu trong phần thân (Body) của request, an toàn hơn và truyền được nhiều dữ liệu.
+  * Tag Helpers (asp-for, asp-action, asp-controller): Cú pháp mở rộng của Razor trong ASP.NET Core giúp liên kết các trường input của HTML trực tiếp với thuộc tính trong Model C#.
+  * Routing (Định tuyến): Cơ chế ánh xạ đường dẫn URL mà người dùng truy cập tới Controller và Action tương ứng để thực thi.
+
+--------------------------------------------------------------------------------
+
+[TUẦN 5]
+- Ngày cập nhật: 
+- Nội dung tóm tắt:
+  + (Ghi chú nội dung cập nhật, tính năng mới hoặc bài tập tuần 5 tại đây...)
+
+- Kiến thức & Định nghĩa cơ bản:
+  * ORM (Object-Relational Mapping): Kỹ thuật ánh xạ bảng cơ sở dữ liệu thành các lớp (Class) đối tượng trong C#, giúp thao tác dữ liệu qua code mà không cần viết nhiều câu lệnh SQL thủ công.
+  * Entity Framework Core (EF Core): Thư viện ORM phổ biến nhất cho .NET.
+  * CRUD: 4 thao tác cốt lõi trong phần mềm quản lý:
+    - Create: Tạo mới dữ liệu.
+    - Read: Đọc / Tìm kiếm / Xem danh sách dữ liệu.
+    - Update: Chỉnh sửa / Cập nhật dữ liệu.
+    - Delete: Xóa dữ liệu.
+
+================================================================================
+(Các tuần tiếp theo từ Tuần 6 -> Tuần 16 sẽ được bổ sung lần lượt trong quá trình học)
+================================================================================
