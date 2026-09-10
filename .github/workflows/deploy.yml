@@ -17,6 +17,7 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+          dotnet-quality: 'preview'
 
       - name: Restore dependencies
         run: dotnet restore
@@ -34,5 +35,6 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./publish/
-          server-dir: /wwwroot/
+          server-dir: wwwroot/
+          dangerous-clean-slate: false
 
