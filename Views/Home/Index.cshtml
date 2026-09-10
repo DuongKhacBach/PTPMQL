@@ -1,8 +1,64 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+@{
+    ViewData["Title"] = "Trang chủ - Phát triển Phần mềm Quản lý";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<!-- Hero Section -->
+<div class="p-5 mb-4 bg-white custom-card text-center">
+    <div class="container-fluid py-3">
+        <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-2 mb-3">
+            <i class="bi bi-mortarboard-fill me-1"></i> Môn học: Phát triển Phần mềm Quản lý
+        </span>
+        <h1 class="display-5 fw-bold text-dark mb-3">Hệ thống Demo ASP.NET Core MVC</h1>
+        <p class="col-md-8 fs-6 text-muted mx-auto mb-4">
+            Dự án thực hành môn học với kiến trúc MVC, tích hợp Bootstrap 5 hiện đại, tự động triển khai CI/CD qua GitHub Actions lên máy chủ MonsterASP.NET.
+        </p>
+        <div class="d-flex justify-content-center gap-3 flex-wrap">
+            <a asp-controller="Student" asp-action="Index" class="btn btn-primary px-4 py-2">
+                <i class="bi bi-person-fill-gear me-1"></i> Quản lý Sinh viên
+            </a>
+            <a asp-controller="Demo" asp-action="Index" class="btn btn-outline-primary px-4 py-2">
+                <i class="bi bi-play-circle me-1"></i> Trang Demo
+            </a>
+        </div>
+    </div>
 </div>
+
+<!-- Feature Grid -->
+<div class="row g-4">
+    <div class="col-md-4">
+        <div class="custom-card p-4 h-100">
+            <div class="d-inline-flex align-items-center justify-content-center bg-primary-subtle text-primary rounded-3 p-3 mb-3">
+                <i class="bi bi-diagram-3-fill fs-3"></i>
+            </div>
+            <h5 class="fw-bold mb-2">Mô hình MVC</h5>
+            <p class="text-muted small mb-0">
+                Tổ chức mã nguồn rõ ràng theo 3 tầng Model, View, Controller giúp ứng dụng dễ bảo trì và mở rộng.
+            </p>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="custom-card p-4 h-100">
+            <div class="d-inline-flex align-items-center justify-content-center bg-info-subtle text-info rounded-3 p-3 mb-3">
+                <i class="bi bi-palette-fill fs-3"></i>
+            </div>
+            <h5 class="fw-bold mb-2">Bootstrap 5 UI</h5>
+            <p class="text-muted small mb-0">
+                Giao diện đáp ứng (Responsive), hỗ trợ tối ưu trên mọi kích thước màn hình từ di động đến máy tính để bàn.
+            </p>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="custom-card p-4 h-100">
+            <div class="d-inline-flex align-items-center justify-content-center bg-success-subtle text-success rounded-3 p-3 mb-3">
+                <i class="bi bi-cloud-arrow-up-fill fs-3"></i>
+            </div>
+            <h5 class="fw-bold mb-2">CI/CD Tự động</h5>
+            <p class="text-muted small mb-0">
+                Tự động kiểm tra, đóng gói và cập nhật trực tiếp lên hosting MonsterASP.NET mỗi khi đẩy code lên GitHub.
+            </p>
+        </div>
+    </div>
+</div>
+

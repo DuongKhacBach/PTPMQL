@@ -2,6 +2,26 @@
     ViewData["Title"] = "Demo Index";
 }
 
-<div class="text-center mt-5">
-    <h2 class="display-6">view index của democontroller</h2>
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="custom-card text-center p-5">
+            <div class="mb-4">
+                <span class="d-inline-flex align-items-center justify-content-center bg-primary-subtle text-primary rounded-circle p-4 mb-3" style="width: 80px; height: 80px;">
+                    <i class="bi bi-layers fs-1"></i>
+                </span>
+                <h2 class="fw-bold text-dark mb-2">View Index của DemoController</h2>
+                <p class="text-muted">Minh họa cách tạo Controller và View Razor trong ASP.NET Core MVC (Tuần 2)</p>
+            </div>
+
+            <div class="d-flex justify-content-center gap-3">
+                <a asp-controller="Student" asp-action="Index" class="btn btn-primary px-4">
+                    <i class="bi bi-person-badge me-1"></i> Đến trang Sinh viên
+                </a>
+                <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary px-4">
+                    <i class="bi bi-house-door me-1"></i> Về Trang chủ
+                </a>
+            </div>
+        </div>
+    </div>
 </div>
+

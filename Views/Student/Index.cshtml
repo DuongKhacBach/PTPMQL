@@ -1,57 +1,115 @@
 @{
-    ViewData["Title"] = "View Index StudentController";
+    ViewData["Title"] = "Quản lý Sinh viên - Form Student";
 }
 
-<div class="container mt-4">
-    <h2 class="mb-3">View Index StudentController</h2>
-    <ul class="text-muted mb-4">
-        <li>1. Tạo form để gửi dữ liệu từ view lên controller</li>
-        <li>2. Controller nhận dữ liệu từ view gửi lên và xử lý</li>
-        <li>3. Hiển thị kết quả sau khi xử lý</li>
-    </ul>
-
-    <form asp-action="Index" method="post" class="p-4 border rounded shadow-sm bg-light" style="max-width: 600px;">
-        <div class="mb-3">
-            <label for="fullName" class="form-label fw-bold">Họ tên:</label>
-            <input type="text" class="form-control" id="fullName" name="fullName" placeholder="Nhập họ tên" value="@ViewBag.FullName" required />
-        </div>
-
-        <div class="mb-3">
-            <label for="address" class="form-label fw-bold">Địa chỉ:</label>
-            <input type="text" class="form-control" id="address" name="address" placeholder="Nhập địa chỉ" value="@ViewBag.Address" required />
-        </div>
-
-        <div class="mb-3">
-            <label for="school" class="form-label fw-bold">Trường:</label>
-            <input type="text" class="form-control" id="school" name="school" placeholder="Nhập tên trường" value="@ViewBag.School" required />
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label fw-bold d-block">Giới tính:</label>
-            <div class="form-check form-check-inline">
-                <input class="form-check-input" type="radio" name="gender" id="genderNam" value="Nam" @(ViewBag.Gender == "Nữ" ? "" : "checked") />
-                <label class="form-check-label" for="genderNam">Nam</label>
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="custom-card mb-4">
+            <div class="custom-card-header d-flex align-items-center justify-content-between">
+                <div>
+                    <h4 class="mb-1 text-primary fw-bold">
+                        <i class="bi bi-person-lines-fill me-2"></i>View Index StudentController
+                    </h4>
+                    <p class="text-muted small mb-0">Xử lý truyền nhận dữ liệu HTTP POST với ASP.NET Core MVC</p>
+                </div>
+                <span class="badge bg-primary rounded-pill px-3 py-2">
+                    <i class="bi bi-check2-circle"></i> Tuần 4
+                </span>
             </div>
-            <div class="form-check form-check-inline">
-                <input class="form-check-input" type="radio" name="gender" id="genderNu" value="Nữ" @(ViewBag.Gender == "Nữ" ? "checked" : "") />
-                <label class="form-check-label" for="genderNu">Nữ</label>
+
+            <div class="p-4">
+                <div class="alert alert-info custom-alert d-flex align-items-start gap-3 mb-4">
+                    <i class="bi bi-info-circle-fill fs-4 text-info mt-1"></i>
+                    <div>
+                        <strong class="d-block mb-1">Mục tiêu bài học:</strong>
+                        <ul class="mb-0 ps-3 small text-secondary">
+                            <li>1. Tạo form gửi dữ liệu từ Razor View lên Controller</li>
+                            <li>2. Controller tiếp nhận tham số qua Model / Request và xử lý nghiệp vụ</li>
+                            <li>3. Trả kết quả về View hiển thị cho người dùng thông qua ViewBag</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <form asp-action="Index" method="post">
+                    <div class="mb-3">
+                        <label for="fullName" class="form-label">
+                            <i class="bi bi-person text-primary me-1"></i> Họ và tên:
+                        </label>
+                        <input type="text" class="form-control" id="fullName" name="fullName" placeholder="Ví dụ: Nguyễn Văn A" value="@ViewBag.FullName" required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="address" class="form-label">
+                            <i class="bi bi-geo-alt text-primary me-1"></i> Địa chỉ:
+                        </label>
+                        <input type="text" class="form-control" id="address" name="address" placeholder="Ví dụ: Hà Nội" value="@ViewBag.Address" required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="school" class="form-label">
+                            <i class="bi bi-building text-primary me-1"></i> Trường học:
+                        </label>
+                        <input type="text" class="form-control" id="school" name="school" placeholder="Ví dụ: Đại học Mỏ - Địa chất" value="@ViewBag.School" required />
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label d-block">
+                            <i class="bi bi-gender-ambiguous text-primary me-1"></i> Giới tính:
+                        </label>
+                        <div class="d-flex gap-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="gender" id="genderNam" value="Nam" @(ViewBag.Gender == "Nữ" ? "" : "checked") />
+                                <label class="form-check-label" for="genderNam">
+                                    <i class="bi bi-gender-male text-primary"></i> Nam
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="gender" id="genderNu" value="Nữ" @(ViewBag.Gender == "Nữ" ? "checked" : "") />
+                                <label class="form-check-label" for="genderNu">
+                                    <i class="bi bi-gender-female text-danger"></i> Nữ
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="reset" class="btn btn-outline-secondary px-3">
+                            <i class="bi bi-arrow-counterclockwise"></i> Nhập lại
+                        </button>
+                        <button type="submit" class="btn btn-primary px-4">
+                            <i class="bi bi-send-fill me-1"></i> Gửi dữ liệu
+                        </button>
+                    </div>
+                </form>
+
+                @if (ViewBag.Message != null)
+                {
+                    <div class="alert alert-success custom-alert mt-4 p-4 border border-success-subtle">
+                        <h5 class="alert-heading fw-bold d-flex align-items-center gap-2 text-success">
+                            <i class="bi bi-check-circle-fill"></i> Kết quả xử lý từ Controller:
+                        </h5>
+                        <hr class="border-success-subtle" />
+                        <div class="row g-2">
+                            <div class="col-sm-6">
+                                <p class="mb-1"><strong>Họ tên:</strong> <span class="text-dark">@ViewBag.FullName</span></p>
+                            </div>
+                            <div class="col-sm-6">
+                                <p class="mb-1"><strong>Giới tính:</strong> <span class="text-dark">@ViewBag.Gender</span></p>
+                            </div>
+                            <div class="col-sm-6">
+                                <p class="mb-1"><strong>Địa chỉ:</strong> <span class="text-dark">@ViewBag.Address</span></p>
+                            </div>
+                            <div class="col-sm-6">
+                                <p class="mb-1"><strong>Trường:</strong> <span class="text-dark">@ViewBag.School</span></p>
+                            </div>
+                        </div>
+                        <hr class="border-success-subtle" />
+                        <p class="mb-0 text-success fw-bold">
+                            <i class="bi bi-chat-left-text me-1"></i> @ViewBag.thongBao
+                        </p>
+                    </div>
+                }
             </div>
         </div>
-
-        <button type="submit" class="btn btn-primary">Gửi dữ liệu</button>
-    </form>
-
-    @if (ViewBag.Message != null)
-    {
-        <div class="alert alert-success mt-4" style="max-width: 600px;">
-            <h5 class="alert-heading fw-bold">Kết quả sau khi xử lý:</h5>
-            <hr />
-            <p class="mb-1"><strong>Họ tên:</strong> @ViewBag.FullName</p>
-            <p class="mb-1"><strong>Địa chỉ:</strong> @ViewBag.Address</p>
-            <p class="mb-1"><strong>Trường:</strong> @ViewBag.School</p>
-            <p class="mb-1"><strong>Giới tính:</strong> @ViewBag.Gender</p>
-            <hr />
-            <p class="mb-0 text-success fw-bold">@ViewBag.thongBao</p>
-        </div>
-    }
+    </div>
 </div>

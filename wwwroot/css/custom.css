@@ -1,0 +1,161 @@
+/* ==========================================================================
+   CUSTOM STYLES FOR DEMOMVC - BOOTSTRAP 5 ENHANCEMENTS
+   ========================================================================== */
+
+:root {
+  --primary-color: #0d6efd;
+  --primary-hover: #0b5ed7;
+  --primary-light: rgba(13, 110, 253, 0.1);
+  --secondary-color: #6c757d;
+  --accent-gradient: linear-gradient(135deg, #0d6efd 0%, #0dcaf0 100%);
+  --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.06), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+  --card-shadow-hover: 0 20px 30px -10px rgba(13, 110, 253, 0.15);
+  --border-radius: 12px;
+}
+
+/* --- 1. Global & Typography --- */
+body {
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  background-color: #f8fafc;
+  color: #1e293b;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  flex: 1 0 auto;
+}
+
+/* --- 2. Navbar Styling --- */
+.main-navbar {
+  background: rgba(255, 255, 255, 0.92) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.main-navbar .navbar-brand {
+  font-weight: 700;
+  font-size: 1.35rem;
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.main-navbar .nav-link {
+  font-weight: 500;
+  color: #475569 !important;
+  padding: 8px 16px !important;
+  border-radius: 8px;
+  transition: all 0.2s ease-in-out;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.main-navbar .nav-link:hover {
+  color: var(--primary-color) !important;
+  background-color: var(--primary-light);
+  transform: translateY(-1px);
+}
+
+.main-navbar .nav-link.active {
+  color: var(--primary-color) !important;
+  font-weight: 600;
+  background-color: var(--primary-light);
+}
+
+/* --- 3. Card & Container Layout --- */
+.custom-card {
+  background: #ffffff;
+  border-radius: var(--border-radius);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: var(--card-shadow);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  overflow: hidden;
+}
+
+.custom-card:hover {
+  box-shadow: var(--card-shadow-hover);
+  transform: translateY(-2px);
+}
+
+.custom-card-header {
+  background: #ffffff;
+  border-bottom: 1px solid #f1f5f9;
+  padding: 18px 24px;
+}
+
+/* --- 4. Forms & Inputs --- */
+.form-control, .form-select {
+  border-radius: 8px;
+  border: 1.5px solid #cbd5e1;
+  padding: 10px 14px;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.15);
+}
+
+.form-label {
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 6px;
+}
+
+/* --- 5. Custom Buttons --- */
+.btn-primary {
+  background: var(--accent-gradient);
+  border: none;
+  font-weight: 600;
+  border-radius: 8px;
+  padding: 10px 22px;
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 12px rgba(13, 110, 253, 0.25);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(13, 110, 253, 0.35);
+  filter: brightness(1.05);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+/* --- 6. Alerts & Badges --- */
+.custom-alert {
+  border-radius: var(--border-radius);
+  border: none;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
+}
+
+/* --- 7. Footer Styling --- */
+.main-footer {
+  background-color: #ffffff;
+  border-top: 1px solid #e2e8f0;
+  padding: 24px 0;
+  color: #64748b;
+  font-size: 0.9rem;
+  margin-top: auto;
+}
+
+.main-footer a {
+  color: #475569;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.main-footer a:hover {
+  color: var(--primary-color);
+}
