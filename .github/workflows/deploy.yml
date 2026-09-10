@@ -28,6 +28,13 @@ jobs:
       - name: Publish
         run: dotnet publish --configuration Release --output ./publish
 
+      - name: Put App Offline (Release file lock on IIS)
+        run: |
+          echo '<!DOCTYPE html><html><head><title>Updating...</title><meta http-equiv="refresh" content="5"></head><body style="font-family:sans-serif;text-align:center;padding-top:100px;"><h2>Website dang duoc cap nhat...</h2><p>Vui long cho trong giay lat...</p></body></html>' > app_offline.htm
+          curl -s -k -u "${{ secrets.FTP_USERNAME }}:${{ secrets.FTP_PASSWORD }}" -T app_offline.htm "ftp://${{ secrets.FTP_SERVER }}/wwwroot/app_offline.htm" || true
+          echo "Cho 5 giay de IIS giai phong file lock..."
+          sleep 5
+
       - name: Deploy to MonsterASP via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
@@ -37,4 +44,11 @@ jobs:
           local-dir: ./publish/
           server-dir: wwwroot/
           dangerous-clean-slate: false
+
+      - name: Bring App Online (Remove app_offline.htm)
+        if: always()
+        run: |
+          curl -s -k -u "${{ secrets.FTP_USERNAME }}:${{ secrets.FTP_PASSWORD }}" "ftp://${{ secrets.FTP_SERVER }}/wwwroot/" -Q "-DELE app_offline.htm" || true
+          echo "Da go app_offline.htm de website hoat dong tro lai!"
+
 
