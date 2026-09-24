@@ -145,3 +145,48 @@
     - Chuỗi thông số cấu hình cung cấp cho ứng dụng biết loại CSDL, vị trí lưu trữ file (Data Source=App.db), và chế độ chia sẻ bộ nhớ (Cache=Shared).
   * EF Core Migrations:
     - Cơ chế quản lý các phiên bản thay đổi của cấu trúc CSDL theo thời gian (tương tự như Git cho CSDL), giúp đồng bộ và nâng cấp CSDL an toàn mà không làm mất dữ liệu.
+
+--------------------------------------------------------------------------------
+
+[TUẦN 7]
+- Ngày cập nhật: 24/09/2026
+- Nội dung tóm tắt:
+  + Tối ưu, rút gọn và thống nhất toàn bộ hệ thống (xóa bỏ StudentController rời rạc) thành một Controller CRUD duy nhất (PersonController) kết nối CSDL SQLite.
+  + Thống nhất cấu trúc thực thể Person gồm trọn vẹn 4 trường thông tin:
+    * 1. PersonId (Khóa chính - ID)
+    * 2. FullName (Họ và tên)
+    * 3. Address (Địa chỉ)
+    * 4. School (Trường học)
+  + Chi tiết các thành phần thực hiện:
+    * 1. Xây dựng & Tối ưu PersonController:
+      - Áp dụng Dependency Injection (DI) để tiêm ApplicationDbContext vào Controller.
+      - Action Index (Read): Truy vấn bất đồng bộ danh sách Person từ CSDL qua await _context.Person.ToListAsync().
+      - Action Create (GET/POST): Nhận và lưu 4 trường dữ liệu vào SQLite qua _context.Add(person) và await _context.SaveChangesAsync().
+      - Action Edit (GET/POST): Tìm kiếm bản ghi theo id qua FindAsync(id), hiển thị form chỉnh sửa và cập nhật 4 trường qua _context.Update(person).
+      - Action Delete (GET/POST): Hiển thị chi tiết 4 trường và thực thi xóa bản ghi khỏi SQLite qua _context.Person.Remove(person).
+      - Áp dụng [ValidateAntiForgeryToken] trên tất cả các Action POST để chống tấn công CSRF.
+    * 2. Xây dựng 4 View CRUD trong thư mục Views/Person/:
+      - Index.cshtml: Bảng dữ liệu Bootstrap 5 hiển thị đầy đủ 4 cột (ID, Họ tên, Địa chỉ, Trường học) kèm các nút Sửa, Xóa.
+      - Create.cshtml: Form thêm mới 4 trường với Razor Tag Helpers (asp-action, asp-for, asp-validation-for).
+      - Edit.cshtml: Khóa chính PersonId được đặt readonly để bảo vệ toàn vẹn dữ liệu, cho phép sửa FullName, Address, School.
+      - Delete.cshtml: Màn hình xác nhận hiển thị đầy đủ 4 thông tin trước khi xóa, truyền ID ngầm qua <input type="hidden" asp-for="PersonId" />.
+    * 3. Cơ sở dữ liệu & Tự động Migration:
+      - Tạo Migration Add_School_To_Person và bổ sung tự động dbContext.Database.Migrate() trong Program.cs để CSDL SQLite App.db tự động cập nhật cấu trúc bảng.
+    * 4. Tinh gọn & Thống nhất toàn bộ Website:
+      - Dọn dẹp các file cũ/dư thừa (StudentController.cs, Models/Student.cs, Views/Student).
+      - Đồng bộ thanh menu Navbar (_Layout.cshtml) và các nút bấm tại trang chủ (Home/Index.cshtml) trỏ trực tiếp đến trang Quản lý Dữ liệu (/Person).
+
+- Kiến thức & Định nghĩa cơ bản:
+  * Mối liên hệ giữa CSDL/DbContext và CRUD:
+    - CRUD (Create - Read - Update - Delete) là 4 thao tác nghiệp vụ cơ bản mà người dùng tương tác trên giao diện.
+    - ApplicationDbContext là cầu nối ORM (Entity Framework Core) chuyển đổi các phương thức C# thành các câu lệnh SQL tương ứng (INSERT, SELECT, UPDATE, DELETE) và ghi trực tiếp vào file vật lý App.db.
+    - Nếu không có DbContext/CSDL: Dữ liệu chỉ lưu tạm trên RAM và bị mất sạch khi khởi động lại ứng dụng.
+    - Nếu không có CRUD: CSDL chỉ là file tĩnh nằm im trên đĩa cứng, người dùng không thể xem hay quản trị dữ liệu.
+  * Dependency Injection (DI) trong Controller:
+    - Cơ chế cung cấp các phụ thuộc (Dependencies như DbContext) từ bên ngoài vào Controller thông qua hàm khởi tạo (Constructor), giúp giảm sự phụ thuộc chặt chẽ (tight coupling) và tăng tính module, dễ kiểm thử.
+  * Tag Helpers & Model Binding:
+    - Tag Helpers (asp-for, asp-action, asp-route-id): Giúp mã HTML sạch hơn, tích hợp chặt chẽ với C# Model.
+    - Model Binding: Tự động gom dữ liệu từ Form gửi lên (POST) và ép kiểu thành đối tượng Model Person trong C# tương ứng.
+  * Bảo mật CSRF (Cross-Site Request Forgery):
+    - Kỹ thuật tấn công giả mạo yêu cầu từ người dùng đã xác thực. Thuộc tính [ValidateAntiForgeryToken] và mã token tự sinh trong form giúp máy chủ xác minh yêu cầu gửi đến là hợp lệ từ chính form của hệ thống.
+

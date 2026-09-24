@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -16,7 +16,8 @@ namespace DemoMVC.Migrations
                 {
                     PersonId = table.Column<string>(type: "TEXT", nullable: false),
                     FullName = table.Column<string>(type: "TEXT", nullable: true),
-                    Address = table.Column<string>(type: "TEXT", nullable: true)
+                    Address = table.Column<string>(type: "TEXT", nullable: true),
+                    School = table.Column<string>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>
                 {
