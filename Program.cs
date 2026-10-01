@@ -17,29 +17,25 @@ builder.Services.AddControllersWithViews();
 
 var app = builder.Build();
 
-// Đảm bảo cấu trúc bảng trong CSDL SQLite luôn đồng bộ đầy đủ 4 trường
+// Đảm bảo cấu trúc bảng trong CSDL SQLite luôn đồng bộ và hợp lệ
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     try
     {
-        // Tự động bổ sung cột School vào bảng Persons nếu chưa có
-        dbContext.Database.ExecuteSqlRaw("ALTER TABLE Persons ADD COLUMN School TEXT;");
+        // Tự động tạo bảng Employees với 4 trường: EmployeeId, FullName, Age, Address
+        dbContext.Database.ExecuteSqlRaw(@"
+            CREATE TABLE IF NOT EXISTS ""Employees"" (
+                ""EmployeeId"" TEXT NOT NULL PRIMARY KEY,
+                ""FullName"" TEXT NOT NULL,
+                ""Age"" INTEGER NOT NULL,
+                ""Address"" TEXT NULL
+            );
+        ");
     }
-    catch
+    catch (Exception ex)
     {
-        // Cột đã tồn tại
-    }
-
-    try
-    {
-        // Làm sạch dữ liệu NULL cũ nếu có để tránh lỗi ánh xạ
-        dbContext.Database.ExecuteSqlRaw("UPDATE Persons SET FullName = '' WHERE FullName IS NULL;");
-        dbContext.Database.ExecuteSqlRaw("UPDATE Persons SET Address = '' WHERE Address IS NULL;");
-        dbContext.Database.ExecuteSqlRaw("UPDATE Persons SET School = '' WHERE School IS NULL;");
-    }
-    catch
-    {
+        Console.WriteLine($"DB Init Note: {ex.Message}");
     }
 }
 
@@ -57,9 +53,9 @@ app.UseRouting();
 
 app.UseAuthorization();
 
-// Route mặc định: Controller=Person -> Action=Index
+// Route mặc định: Controller=Employee -> Action=Index
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Person}/{action=Index}/{id?}");
+    pattern: "{controller=Employee}/{action=Index}/{id?}");
 
 app.Run();

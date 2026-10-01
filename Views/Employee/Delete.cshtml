@@ -1,0 +1,58 @@
+@model DemoMVC.Models.Employee
+
+@{
+    ViewData["Title"] = "Xóa Nhân viên";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-6 col-md-8 col-12">
+        <div class="card shadow-sm border-0 rounded-3">
+            <div class="card-header bg-white py-3 border-bottom d-flex align-items-center gap-3">
+                <div class="bg-danger-subtle text-danger rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
+                    <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+                </div>
+                <div>
+                    <h5 class="fw-bold text-dark mb-0">Xác nhận xóa Nhân viên</h5>
+                    <small class="text-danger fw-semibold">Hành động này sẽ xóa vĩnh viễn bản ghi khỏi hệ thống!</small>
+                </div>
+            </div>
+
+            <div class="card-body p-4">
+                <div class="alert alert-warning py-2 mb-3 small" role="alert">
+                    <i class="bi bi-info-circle-fill me-1"></i> Bạn có chắc chắn muốn xóa nhân viên dưới đây không?
+                </div>
+
+                <div class="list-group list-group-flush border rounded-2 mb-0">
+                    <div class="list-group-item d-flex justify-content-between align-items-center py-2.5">
+                        <span class="text-muted small fw-semibold">Mã nhân viên (ID):</span>
+                        <span class="fw-bold text-primary">@Model.EmployeeId</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center py-2.5">
+                        <span class="text-muted small fw-semibold">Họ và tên:</span>
+                        <span class="fw-bold text-dark">@Model.FullName</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center py-2.5">
+                        <span class="text-muted small fw-semibold">Tuổi:</span>
+                        <span>@Model.Age tuổi</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center py-2.5">
+                        <span class="text-muted small fw-semibold">Địa chỉ:</span>
+                        <span class="text-secondary">@(string.IsNullOrEmpty(Model.Address) ? "Chưa có" : Model.Address)</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-footer bg-light d-flex justify-content-between py-3 rounded-bottom-3">
+                <a asp-action="Index" class="btn btn-outline-secondary px-3 py-2 rounded-2">
+                    <i class="bi bi-arrow-left me-1"></i> Hủy bỏ
+                </a>
+                <form asp-action="Delete">
+                    <input type="hidden" asp-for="EmployeeId" />
+                    <button type="submit" class="btn btn-danger px-4 py-2 rounded-2 shadow-sm">
+                        <i class="bi bi-trash-fill me-1"></i> Xác nhận xóa
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

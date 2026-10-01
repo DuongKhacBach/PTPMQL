@@ -9,7 +9,7 @@
         <div class="card shadow-sm border-0">
             <div class="card-header bg-primary text-white py-3">
                 <h4 class="card-title mb-0 fw-bold">
-                    <i class="bi bi-person-plus-fill me-2"></i>Thêm mới Dữ liệu
+                    <i class="bi bi-person-plus-fill me-2"></i>Thêm mới Person
                 </h4>
             </div>
             <div class="card-body p-4">
@@ -19,7 +19,7 @@
                     <!-- Trường 1: ID -->
                     <div class="mb-3">
                         <label asp-for="PersonId" class="form-label fw-semibold">Mã định danh (ID):</label>
-                        <input asp-for="PersonId" class="form-control" placeholder="Ví dụ: 20120001 / P01" required />
+                        <input asp-for="PersonId" class="form-control" placeholder="Ví dụ: P01" required />
                         <span asp-validation-for="PersonId" class="text-danger small"></span>
                     </div>
 
@@ -31,17 +31,10 @@
                     </div>
 
                     <!-- Trường 3: Địa chỉ -->
-                    <div class="mb-3">
+                    <div class="mb-4">
                         <label asp-for="Address" class="form-label fw-semibold">Địa chỉ:</label>
                         <input asp-for="Address" class="form-control" placeholder="Ví dụ: Hà Nội" />
                         <span asp-validation-for="Address" class="text-danger small"></span>
-                    </div>
-
-                    <!-- Trường 4: Trường học -->
-                    <div class="mb-4">
-                        <label asp-for="School" class="form-label fw-semibold">Trường học:</label>
-                        <input asp-for="School" class="form-control" placeholder="Ví dụ: Đại học Mỏ - Địa chất" />
-                        <span asp-validation-for="School" class="text-danger small"></span>
                     </div>
 
                     <div class="d-flex justify-content-between align-items-center">

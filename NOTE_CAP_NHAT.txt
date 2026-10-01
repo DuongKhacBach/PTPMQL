@@ -190,3 +190,48 @@
   * Bảo mật CSRF (Cross-Site Request Forgery):
     - Kỹ thuật tấn công giả mạo yêu cầu từ người dùng đã xác thực. Thuộc tính [ValidateAntiForgeryToken] và mã token tự sinh trong form giúp máy chủ xác minh yêu cầu gửi đến là hợp lệ từ chính form của hệ thống.
 
+--------------------------------------------------------------------------------
+
+[TUẦN 8]
+- Ngày cập nhật: 01/10/2026
+- Nội dung tóm tắt:
+  + Sử dụng công cụ sinh mã Scaffold (dotnet aspnet-codegenerator) để tự động sinh Controller và trọn bộ 5 Views CRUD cho thực thể Employee.
+  + Áp dụng toàn diện Data Annotations trên các Model C# để thiết lập nhãn hiển thị tiếng Việt và kiểm thực dữ liệu (Validation) chặt chẽ cả 2 phía Client-side & Server-side.
+  + Tối giản và hợp nhất hệ thống quản lý dữ liệu:
+    * Chuẩn hóa thực thể Employee thành bảng quản lý cốt lõi gồm 4 trường thông tin:
+      1. EmployeeId (Mã nhân viên - Khóa chính [Key])
+      2. FullName (Họ và tên)
+      3. Age (Tuổi - Ràng buộc từ 18 đến 65)
+      4. Address (Địa chỉ)
+    * Loại bỏ các trường thông tin không cần thiết (Mã định danh phụ PersonId, Trường học School) để mã nguồn tinh gọn và tối ưu.
+    * Tái cấu trúc và căn chỉnh giao diện form nhập liệu (Create, Edit) dạng Card bo góc, tích hợp Input Groups và Bootstrap Icons đẹp mắt, cân đối.
+  + Tích hợp LINQ (Language Integrated Query) nâng cao vào hệ thống:
+    * Tìm kiếm dữ liệu đa năng: Sử dụng toán tử LINQ (Where, Contains) để tìm kiếm nhanh theo Họ tên, Mã NV hoặc Địa chỉ.
+    * Sắp xếp dữ liệu linh hoạt (Sortable Headers): Sử dụng LINQ (OrderBy, OrderByDescending) cho phép người dùng click tiêu đề cột để đảo chiều sắp xếp (A-Z, Z-A, Tuổi tăng/giảm).
+    * Thống kê và kiểm tra dữ liệu: Sử dụng LINQ (Count, Any, FirstOrDefaultAsync) để tối ưu hiệu năng truy vấn.
+
+- Kiến thức & Định nghĩa cơ bản:
+  * Công cụ Code Generation (dotnet aspnet-codegenerator):
+    - Công cụ CLI của Microsoft giúp tự động sinh mã nguồn Controller và Views CRUD dựa trên Model và DbContext có sẵn, giúp tăng tốc độ phát triển ứng dụng.
+    - Cú pháp chuẩn: dotnet aspnet-codegenerator controller -name EmployeeController -m Employee -dc DemoMVC.Data.ApplicationDbContext --relativeFolderPath Controllers --useDefaultLayout --referenceScriptLibraries --databaseProvider sqlite
+  * Data Annotations:
+    - Bộ thuộc tính siêu dữ liệu (Metadata Attributes) đặt trên các thuộc tính của Model C# để cấu hình ràng buộc CSDL và quy tắc xác thực dữ liệu:
+      + [Key]: Định danh trường làm khóa chính (Primary Key).
+      + [Display(Name = "...")]: Định cấu hình nhãn hiển thị thân thiện trên giao diện View.
+      + [Required(ErrorMessage = "...")]: Ràng buộc trường bắt buộc phải nhập dữ liệu.
+      + [StringLength(max, MinimumLength = min)]: Ràng buộc độ dài chuỗi ký tự.
+      + [Range(min, max)]: Ràng buộc giá trị số nằm trong khoảng hợp lệ.
+      + [Table("...")]: Ánh xạ tên bảng tương ứng trong CSDL.
+    - Cơ chế kiểm thực:
+      + Client-side Validation: Trình duyệt tự động kiểm tra lỗi thông qua jQuery Validation mà không cần tải lại trang.
+      + Server-side Validation: Máy chủ kiểm tra an toàn qua ModelState.IsValid trong Action HttpPost trước khi lưu vào CSDL.
+  * LINQ (Language Integrated Query):
+    - Cú pháp truy vấn dữ liệu đồng nhất được tích hợp trực tiếp vào ngôn ngữ C#, cho phép lọc, sắp xếp, biến đổi dữ liệu trên các tập hợp (Collections, Arrays) và CSDL (qua EF Core).
+    - Các toán tử LINQ cốt lõi:
+      + AsQueryable() / AsNoTracking(): Tối ưu hóa truy vấn dạng hoãn (Deferred Execution), câu lệnh SQL chỉ thực sự gửi tới SQLite khi gọi ToListAsync().
+      + Where(condition): Lọc danh sách theo biểu thức điều kiện (tương đương WHERE trong SQL).
+      + Contains(keyword): Kiểm tra chuỗi con (tương đương LIKE %keyword% trong SQL).
+      + OrderBy() / OrderByDescending(): Sắp xếp danh sách tăng dần hoặc giảm dần (tương đương ORDER BY trong SQL).
+      + FirstOrDefaultAsync(condition): Lấy phần tử đầu tiên thỏa mãn điều kiện hoặc trả về null nếu không tìm thấy.
+      + Any(condition): Trả về true nếu có ít nhất một phần tử thỏa mãn điều kiện, rất nhanh khi kiểm tra tồn tại.
+

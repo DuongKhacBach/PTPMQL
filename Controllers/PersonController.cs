@@ -7,40 +7,61 @@ namespace DemoMVC.Controllers
 {
     public class PersonController : Controller
     {
-        // Khai báo ApplicationDbContext để kết nối và thao tác CSDL SQLite
         private readonly ApplicationDbContext _context;
 
-        // Constructor: Nhận ApplicationDbContext qua Dependency Injection
         public PersonController(ApplicationDbContext context)
         {
             _context = context;
         }
 
         // =======================================================
-        // 1. READ (Xem danh sách) - GET: /Person hoặc /Person/Index
+        // 1. READ (Xem danh sách với LINQ: Tìm kiếm & Sắp xếp)
         // =======================================================
         [HttpGet]
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(string? searchString, string? sortOrder)
         {
-            // Lấy toàn bộ danh sách gồm 4 trường (PersonId, FullName, Address, School)
-            var persons = await _context.Person.ToListAsync();
+            ViewData["CurrentFilter"] = searchString;
+            ViewData["CurrentSort"] = sortOrder;
+            ViewData["NameSortParm"] = string.IsNullOrEmpty(sortOrder) ? "name_desc" : "";
+            ViewData["IdSortParm"] = sortOrder == "id_desc" ? "id_asc" : "id_desc";
+
+            // 1. LINQ IQueryable
+            var query = _context.Person.AsQueryable();
+
+            // 2. LINQ Filtering (Where, Contains)
+            if (!string.IsNullOrEmpty(searchString))
+            {
+                string search = searchString.Trim();
+                query = query.Where(p => (p.FullName != null && p.FullName.Contains(search))
+                                      || (p.PersonId != null && p.PersonId.Contains(search))
+                                      || (p.Address != null && p.Address.Contains(search)));
+            }
+
+            // 3. LINQ Sorting (OrderBy, OrderByDescending)
+            query = sortOrder switch
+            {
+                "name_desc" => query.OrderByDescending(p => p.FullName),
+                "id_desc" => query.OrderByDescending(p => p.PersonId),
+                "id_asc" => query.OrderBy(p => p.PersonId),
+                _ => query.OrderBy(p => p.FullName)
+            };
+
+            var persons = await query.ToListAsync();
             return View(persons);
         }
 
         // =======================================================
         // 2. CREATE (Thêm mới)
         // =======================================================
-        // GET: /Person/Create -> Hiển thị form thêm mới
         [HttpGet]
         public IActionResult Create()
         {
             return View();
         }
 
-        // POST: /Person/Create -> Nhận 4 trường dữ liệu từ form gửi lên
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("PersonId,FullName,Address,School")] Person person)
+        public async Task<IActionResult> Create([Bind("PersonId,FullName,Address")] Person person)
         {
             if (ModelState.IsValid)
             {
@@ -54,7 +75,6 @@ namespace DemoMVC.Controllers
         // =======================================================
         // 3. UPDATE (Chỉnh sửa)
         // =======================================================
-        // GET: /Person/Edit/{id} -> Lấy thông tin bản ghi theo id
         [HttpGet]
         public async Task<IActionResult> Edit(string? id)
         {
@@ -71,10 +91,9 @@ namespace DemoMVC.Controllers
             return View(person);
         }
 
-        // POST: /Person/Edit/{id} -> Cập nhật 4 trường dữ liệu vào CSDL
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(string id, [Bind("PersonId,FullName,Address,School")] Person person)
+        public async Task<IActionResult> Edit(string id, [Bind("PersonId,FullName,Address")] Person person)
         {
             if (id != person.PersonId)
             {
@@ -107,7 +126,6 @@ namespace DemoMVC.Controllers
         // =======================================================
         // 4. DELETE (Xóa)
         // =======================================================
-        // GET: /Person/Delete/{id} -> Hiển thị thông tin để xác nhận xóa
         [HttpGet]
         public async Task<IActionResult> Delete(string? id)
         {
@@ -125,7 +143,6 @@ namespace DemoMVC.Controllers
             return View(person);
         }
 
-        // POST: /Person/Delete/{id} -> Thực thi xóa bản ghi khỏi SQLite
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(string id)
@@ -139,7 +156,6 @@ namespace DemoMVC.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        // Kiểm tra sự tồn tại của PersonId
         private bool PersonExists(string id)
         {
             return _context.Person.Any(e => e.PersonId == id);

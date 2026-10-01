@@ -1,0 +1,91 @@
+@model DemoMVC.Models.Employee
+
+@{
+    ViewData["Title"] = "Thêm mới Nhân viên";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-6 col-md-8 col-12">
+        <div class="card shadow-sm border-0 rounded-3">
+            <!-- Header Form -->
+            <div class="card-header bg-white py-3 border-bottom d-flex align-items-center gap-3">
+                <div class="bg-primary-subtle text-primary rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
+                    <i class="bi bi-person-plus-fill fs-5"></i>
+                </div>
+                <div>
+                    <h5 class="fw-bold text-dark mb-0">Thêm mới Nhân viên</h5>
+                    <small class="text-muted">Nhập thông tin chi tiết của nhân viên vào các trường bên dưới</small>
+                </div>
+            </div>
+
+            <!-- Body Form -->
+            <div class="card-body p-4">
+                <form asp-action="Create">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 small" role="alert"></div>
+
+                    <!-- Row 1: Mã NV & Tuổi -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label asp-for="EmployeeId" class="form-label fw-semibold text-dark small"></label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light text-muted border-end-0">
+                                    <i class="bi bi-person-badge"></i>
+                                </span>
+                                <input asp-for="EmployeeId" class="form-control border-start-0 ps-0" placeholder="Ví dụ: NV001" autofocus />
+                            </div>
+                            <span asp-validation-for="EmployeeId" class="text-danger small mt-1 d-block"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Age" class="form-label fw-semibold text-dark small"></label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light text-muted border-end-0">
+                                    <i class="bi bi-calendar3"></i>
+                                </span>
+                                <input asp-for="Age" class="form-control border-start-0 ps-0" type="number" min="18" max="65" placeholder="18 - 65" />
+                            </div>
+                            <span asp-validation-for="Age" class="text-danger small mt-1 d-block"></span>
+                        </div>
+                    </div>
+
+                    <!-- Row 2: Họ và tên -->
+                    <div class="mb-3">
+                        <label asp-for="FullName" class="form-label fw-semibold text-dark small"></label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light text-muted border-end-0">
+                                <i class="bi bi-person"></i>
+                            </span>
+                            <input asp-for="FullName" class="form-control border-start-0 ps-0" placeholder="Nhập họ và tên đầy đủ..." />
+                        </div>
+                        <span asp-validation-for="FullName" class="text-danger small mt-1 d-block"></span>
+                    </div>
+
+                    <!-- Row 3: Địa chỉ -->
+                    <div class="mb-4">
+                        <label asp-for="Address" class="form-label fw-semibold text-dark small"></label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light text-muted border-end-0">
+                                <i class="bi bi-geo-alt"></i>
+                            </span>
+                            <input asp-for="Address" class="form-control border-start-0 ps-0" placeholder="Nhập địa chỉ nơi ở / quê quán..." />
+                        </div>
+                        <span asp-validation-for="Address" class="text-danger small mt-1 d-block"></span>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                        <a asp-action="Index" class="btn btn-outline-secondary px-3 py-2 rounded-2">
+                            <i class="bi bi-arrow-left me-1"></i> Quay lại danh sách
+                        </a>
+                        <button type="submit" class="btn btn-primary px-4 py-2 rounded-2 shadow-sm">
+                            <i class="bi bi-check-lg me-1"></i> Lưu thông tin
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

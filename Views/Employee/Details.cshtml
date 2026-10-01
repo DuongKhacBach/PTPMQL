@@ -1,0 +1,57 @@
+@model DemoMVC.Models.Employee
+
+@{
+    ViewData["Title"] = "Chi tiết Nhân viên";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-6 col-md-8 col-12">
+        <div class="card shadow-sm border-0 rounded-3">
+            <div class="card-header bg-white py-3 border-bottom d-flex align-items-center gap-3">
+                <div class="bg-info-subtle text-info rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
+                    <i class="bi bi-info-circle-fill fs-5"></i>
+                </div>
+                <div>
+                    <h5 class="fw-bold text-dark mb-0">Thông tin Chi tiết Nhân viên</h5>
+                    <small class="text-muted">Xem đầy đủ thông tin nhân viên trong hệ thống</small>
+                </div>
+            </div>
+
+            <div class="card-body p-4">
+                <div class="list-group list-group-flush border rounded-2">
+                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                        <span class="text-muted small fw-semibold"><i class="bi bi-person-badge me-2 text-primary"></i>Mã nhân viên (ID):</span>
+                        <span class="fw-bold text-primary fs-6">
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2.5 py-1.5">
+                                @Model.EmployeeId
+                            </span>
+                        </span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                        <span class="text-muted small fw-semibold"><i class="bi bi-person me-2 text-secondary"></i>Họ và tên:</span>
+                        <span class="fw-bold text-dark">@Model.FullName</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                        <span class="text-muted small fw-semibold"><i class="bi bi-calendar3 me-2 text-secondary"></i>Tuổi:</span>
+                        <span class="badge bg-info-subtle text-info border border-info-subtle px-2.5 py-1">
+                            @Model.Age tuổi
+                        </span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                        <span class="text-muted small fw-semibold"><i class="bi bi-geo-alt me-2 text-secondary"></i>Địa chỉ:</span>
+                        <span class="text-secondary">@(string.IsNullOrEmpty(Model.Address) ? "Chưa cập nhật" : Model.Address)</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-footer bg-light d-flex justify-content-between py-3 rounded-bottom-3">
+                <a asp-action="Index" class="btn btn-outline-secondary px-3 py-2 rounded-2">
+                    <i class="bi bi-arrow-left me-1"></i> Quay lại danh sách
+                </a>
+                <a asp-action="Edit" asp-route-id="@Model?.EmployeeId" class="btn btn-warning px-3 py-2 rounded-2 fw-semibold text-dark">
+                    <i class="bi bi-pencil-square me-1"></i> Chỉnh sửa
+                </a>
+            </div>
+        </div>
+    </div>
+</div>

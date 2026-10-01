@@ -1,0 +1,163 @@
+@model IEnumerable<DemoMVC.Models.Employee>
+
+@{
+    ViewData["Title"] = "Quản lý Nhân viên";
+    var currentFilter = ViewData["CurrentFilter"] as string;
+    var currentSort = ViewData["CurrentSort"] as string;
+}
+
+<div class="card shadow-sm border-0 rounded-3">
+    <!-- Header & Công cụ tìm kiếm LINQ -->
+    <div class="card-header bg-white py-3 border-bottom">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+            <div class="d-flex align-items-center gap-2">
+                <div class="bg-primary text-white rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
+                    <i class="bi bi-people-fill fs-5"></i>
+                </div>
+                <div>
+                    <h5 class="fw-bold text-dark mb-0">Danh sách Nhân viên</h5>
+                    <small class="text-muted">
+                        Tìm thấy <strong>@(Model?.Count() ?? 0)</strong> nhân viên 
+                        @if (!string.IsNullOrEmpty(currentFilter))
+                        {
+                            <span>với từ khóa <mark class="px-1 rounded">"@currentFilter"</mark></span>
+                        }
+                    </small>
+                </div>
+            </div>
+            <a asp-action="Create" class="btn btn-primary btn-sm px-3 rounded-2">
+                <i class="bi bi-plus-lg me-1"></i> Thêm mới
+            </a>
+        </div>
+
+        <!-- Thanh tìm kiếm sử dụng LINQ (GET Form) -->
+        <form asp-action="Index" method="get" class="row g-2 align-items-center">
+            <input type="hidden" name="sortOrder" value="@currentSort" />
+            <div class="col-md-6 col-lg-5">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-light text-muted border-end-0">
+                        <i class="bi bi-search"></i>
+                    </span>
+                    <input type="text" name="searchString" value="@currentFilter" 
+                           class="form-control border-start-0 ps-0" 
+                           placeholder="Tìm kiếm theo Tên, Mã NV, Địa chỉ..." />
+                    <button type="submit" class="btn btn-primary px-3">
+                        Tìm kiếm
+                    </button>
+                    @if (!string.IsNullOrEmpty(currentFilter))
+                    {
+                        <a asp-action="Index" class="btn btn-outline-secondary" title="Xóa tìm kiếm">
+                            <i class="bi bi-x-lg"></i>
+                        </a>
+                    }
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-7 text-md-end text-muted small">
+                <i class="bi bi-info-circle me-1"></i> Bấm vào tiêu đề cột bên dưới để <strong>sắp xếp (LINQ Sort)</strong>
+            </div>
+        </form>
+    </div>
+
+    <!-- Bảng dữ liệu tối giản tích hợp LINQ Sorting -->
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+                <thead class="table-light text-muted small text-uppercase">
+                    <tr>
+                        <th class="ps-3 py-2.5" style="width: 160px;">
+                            <a asp-action="Index" asp-route-sortOrder="@ViewData["IdSortParm"]" asp-route-searchString="@currentFilter" class="text-decoration-none text-muted d-inline-flex align-items-center gap-1">
+                                Mã NV <i class="bi bi-arrow-down-up text-secondary small"></i>
+                            </a>
+                        </th>
+                        <th class="py-2.5">
+                            <a asp-action="Index" asp-route-sortOrder="@ViewData["NameSortParm"]" asp-route-searchString="@currentFilter" class="text-decoration-none text-muted d-inline-flex align-items-center gap-1">
+                                Họ và tên <i class="bi bi-arrow-down-up text-secondary small"></i>
+                            </a>
+                        </th>
+                        <th class="py-2.5" style="width: 120px;">
+                            <a asp-action="Index" asp-route-sortOrder="@ViewData["AgeSortParm"]" asp-route-searchString="@currentFilter" class="text-decoration-none text-muted d-inline-flex align-items-center gap-1">
+                                Tuổi <i class="bi bi-arrow-down-up text-secondary small"></i>
+                            </a>
+                        </th>
+                        <th class="py-2.5">Địa chỉ</th>
+                        <th class="text-end pe-3 py-2.5" style="width: 150px;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody class="border-top-0">
+                    @if (Model != null && Model.Any())
+                    {
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td class="ps-3 fw-bold text-primary">
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">
+                                        <i class="bi bi-person-badge me-1"></i>@item.EmployeeId
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="fw-bold text-dark">@item.FullName</div>
+                                </td>
+                                <td>
+                                    @if (item.Age > 0)
+                                    {
+                                        <span class="badge bg-info-subtle text-info border border-info-subtle">
+                                            @item.Age tuổi
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">--</span>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="text-secondary small">
+                                        <i class="bi bi-geo-alt text-muted me-1"></i>@(string.IsNullOrEmpty(item.Address) ? "Chưa có" : item.Address)
+                                    </span>
+                                </td>
+                                <td class="text-end pe-3">
+                                    <div class="btn-group btn-group-sm">
+                                        <a asp-action="Details" asp-route-id="@item.EmployeeId" class="btn btn-outline-secondary btn-sm py-1 px-2" title="Chi tiết">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <a asp-action="Edit" asp-route-id="@item.EmployeeId" class="btn btn-outline-warning btn-sm py-1 px-2" title="Chỉnh sửa">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <a asp-action="Delete" asp-route-id="@item.EmployeeId" class="btn btn-outline-danger btn-sm py-1 px-2" title="Xóa">
+                                            <i class="bi bi-trash"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-5">
+                                <i class="bi bi-inbox fs-2 d-block text-secondary mb-2"></i>
+                                @if (!string.IsNullOrEmpty(currentFilter))
+                                {
+                                    <span>Không tìm thấy nhân viên nào khớp với từ khóa "<strong>@currentFilter</strong>".</span>
+                                    <div class="mt-2">
+                                        <a asp-action="Index" class="btn btn-sm btn-outline-secondary">
+                                            <i class="bi bi-arrow-clockwise me-1"></i> Xóa bộ lọc tìm kiếm
+                                        </a>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span>Chưa có dữ liệu nhân viên nào trong hệ thống.</span>
+                                    <div class="mt-2">
+                                        <a asp-action="Create" class="btn btn-sm btn-primary">
+                                            <i class="bi bi-plus-circle me-1"></i> Thêm nhân viên đầu tiên
+                                        </a>
+                                    </div>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
