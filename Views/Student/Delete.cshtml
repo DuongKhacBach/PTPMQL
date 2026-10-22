@@ -1,7 +1,7 @@
-@model DemoMVC.Models.Employee
+@model DemoMVC.Models.Student
 
 @{
-    ViewData["Title"] = "Xóa Nhân viên";
+    ViewData["Title"] = "Xóa Sinh viên";
 }
 
 <div class="row justify-content-center">
@@ -12,32 +12,32 @@
                     <i class="bi bi-exclamation-triangle-fill fs-5"></i>
                 </div>
                 <div>
-                    <h5 class="fw-bold text-dark mb-0">Xác nhận xóa Nhân viên</h5>
+                    <h5 class="fw-bold text-dark mb-0">Xác nhận xóa Sinh viên</h5>
                     <small class="text-danger fw-semibold">Hành động này sẽ xóa vĩnh viễn bản ghi khỏi hệ thống!</small>
                 </div>
             </div>
 
             <div class="card-body p-4">
                 <div class="alert alert-warning py-2 mb-3 small" role="alert">
-                    <i class="bi bi-info-circle-fill me-1"></i> Bạn có chắc chắn muốn xóa nhân viên dưới đây không?
+                    <i class="bi bi-info-circle-fill me-1"></i> Bạn có chắc chắn muốn xóa sinh viên dưới đây không?
                 </div>
 
                 <div class="list-group list-group-flush border rounded-2 mb-0">
                     <div class="list-group-item d-flex justify-content-between align-items-center py-2.5">
-                        <span class="text-muted small fw-semibold">Mã nhân viên (ID):</span>
-                        <span class="fw-bold text-primary">@Model.EmployeeId</span>
+                        <span class="text-muted small fw-semibold">Mã sinh viên (ID):</span>
+                        <span class="fw-bold text-primary font-monospace">@Model.StudentId</span>
                     </div>
                     <div class="list-group-item d-flex justify-content-between align-items-center py-2.5">
                         <span class="text-muted small fw-semibold">Họ và tên:</span>
                         <span class="fw-bold text-dark">@Model.FullName</span>
                     </div>
                     <div class="list-group-item d-flex justify-content-between align-items-center py-2.5">
-                        <span class="text-muted small fw-semibold">Tuổi:</span>
-                        <span>@Model.Age tuổi</span>
+                        <span class="text-muted small fw-semibold">Khoa:</span>
+                        <span>@(Model.Faculty != null ? Model.Faculty.FacultyName : "Chưa phân khoa")</span>
                     </div>
                     <div class="list-group-item d-flex justify-content-between align-items-center py-2.5">
-                        <span class="text-muted small fw-semibold">Địa chỉ:</span>
-                        <span class="text-secondary">@(string.IsNullOrEmpty(Model.Address) ? "Chưa có" : Model.Address)</span>
+                        <span class="text-muted small fw-semibold">Số điện thoại:</span>
+                        <span class="text-secondary">@(string.IsNullOrEmpty(Model.PhoneNumber) ? "Chưa có" : Model.PhoneNumber)</span>
                     </div>
                 </div>
             </div>
@@ -47,7 +47,7 @@
                     <i class="bi bi-arrow-left me-1"></i> Hủy bỏ
                 </a>
                 <form asp-action="Delete">
-                    <input type="hidden" asp-for="EmployeeId" />
+                    <input type="hidden" asp-for="StudentId" />
                     <button type="submit" class="btn btn-danger px-4 py-2 rounded-2 shadow-sm">
                         <i class="bi bi-trash-fill me-1"></i> Xác nhận xóa
                     </button>

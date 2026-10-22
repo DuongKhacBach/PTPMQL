@@ -16,48 +16,122 @@ namespace DemoMVC.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.12");
 
-            modelBuilder.Entity("DemoMVC.Models.Person", b =>
+            modelBuilder.Entity("DemoMVC.Models.Faculty", b =>
                 {
-                    b.Property<string>("PersonId")
+                    b.Property<string>("FacultyId")
+                        .HasMaxLength(10)
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Address")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Discriminator")
+                    b.Property<string>("FacultyCode")
                         .IsRequired()
-                        .HasMaxLength(8)
+                        .HasMaxLength(2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FacultyName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("FacultyId");
+
+                    b.ToTable("Faculties");
+
+                    b.HasData(
+                        new
+                        {
+                            FacultyId = "CNTT",
+                            FacultyCode = "05",
+                            FacultyName = "Công nghệ thông tin"
+                        },
+                        new
+                        {
+                            FacultyId = "MO",
+                            FacultyCode = "01",
+                            FacultyName = "Mỏ"
+                        },
+                        new
+                        {
+                            FacultyId = "DC",
+                            FacultyCode = "02",
+                            FacultyName = "Địa chất"
+                        },
+                        new
+                        {
+                            FacultyId = "DK",
+                            FacultyCode = "03",
+                            FacultyName = "Dầu khí"
+                        },
+                        new
+                        {
+                            FacultyId = "KT",
+                            FacultyCode = "04",
+                            FacultyName = "Kinh tế & Quản trị kinh doanh"
+                        },
+                        new
+                        {
+                            FacultyId = "CD",
+                            FacultyCode = "06",
+                            FacultyName = "Cơ - Điện"
+                        },
+                        new
+                        {
+                            FacultyId = "XD",
+                            FacultyCode = "07",
+                            FacultyName = "Xây dựng"
+                        },
+                        new
+                        {
+                            FacultyId = "MT",
+                            FacultyCode = "08",
+                            FacultyName = "Môi trường"
+                        },
+                        new
+                        {
+                            FacultyId = "TDBD",
+                            FacultyCode = "09",
+                            FacultyName = "Trắc địa - Bản đồ và Quản lý đất đai"
+                        });
+                });
+
+            modelBuilder.Entity("DemoMVC.Models.Student", b =>
+                {
+                    b.Property<string>("StudentId")
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FacultyId")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("FullName")
                         .IsRequired()
+                        .HasMaxLength(100)
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("School")
+                    b.Property<string>("PhoneNumber")
                         .HasColumnType("TEXT");
 
-                    b.HasKey("PersonId");
+                    b.HasKey("StudentId");
 
-                    b.ToTable("Persons");
+                    b.HasIndex("FacultyId");
 
-                    b.HasDiscriminator<string>("Discriminator").HasValue("Person");
-
-                    b.UseTphMappingStrategy();
+                    b.ToTable("Students");
                 });
 
-            modelBuilder.Entity("DemoMVC.Models.Employee", b =>
+            modelBuilder.Entity("DemoMVC.Models.Student", b =>
                 {
-                    b.HasBaseType("DemoMVC.Models.Person");
+                    b.HasOne("DemoMVC.Models.Faculty", "Faculty")
+                        .WithMany("Students")
+                        .HasForeignKey("FacultyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
-                    b.Property<int>("Age")
-                        .HasColumnType("INTEGER");
+                    b.Navigation("Faculty");
+                });
 
-                    b.Property<string>("EmployeeId")
-                        .HasColumnType("TEXT");
-
-                    b.ToTable("Persons");
-
-                    b.HasDiscriminator().HasValue("Employee");
+            modelBuilder.Entity("DemoMVC.Models.Faculty", b =>
+                {
+                    b.Navigation("Students");
                 });
 #pragma warning restore 612, 618
         }

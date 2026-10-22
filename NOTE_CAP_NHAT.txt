@@ -235,3 +235,34 @@
       + FirstOrDefaultAsync(condition): Lấy phần tử đầu tiên thỏa mãn điều kiện hoặc trả về null nếu không tìm thấy.
       + Any(condition): Trả về true nếu có ít nhất một phần tử thỏa mãn điều kiện, rất nhanh khi kiểm tra tồn tại.
 
+--------------------------------------------------------------------------------
+
+[TUẦN 9]
+- Ngày cập nhật: 22/10/2026
+- Nội dung tóm tắt:
+  + Chuyển đổi và chuẩn hóa toàn bộ hệ thống sang Quản lý Sinh viên (Student) và Khoa (Faculty).
+  + Tạo liên kết khóa ngoại (Foreign Key) giữa bảng Sinh viên (Students) và bảng Khoa (Faculties) qua trường FacultyId.
+  + Nạp sẵn dữ liệu ban đầu (Seed Data) danh sách 9 Khoa thực tế của Trường Đại học Mỏ - Địa chất (HUMG) kèm mã ngành 2 số:
+    * CNTT (05): Công nghệ thông tin
+    * MO (01): Mỏ
+    * DC (02): Địa chất
+    * DK (03): Dầu khí
+    * KT (04): Kinh tế & Quản trị kinh doanh
+    * CD (06): Cơ - Điện
+    * XD (07): Xây dựng
+    * MT (08): Môi trường
+    * TDBD (09): Trắc địa - Bản đồ và Quản lý đất đai
+  + Xây dựng chức năng quản lý bảng có khóa ngoại:
+    * Dropdown chọn Khoa trong form Create và Edit của Sinh viên (sử dụng SelectList).
+    * Hiển thị tên Khoa trên các View Index, Details, Delete thông qua Eager Loading (Include(s => s.Faculty)).
+    * Xây dựng FacultyController và trọn bộ Views CRUD quản lý Khoa, chặn xóa Khoa nếu đang có sinh viên trực thuộc.
+  + Xây dựng chức năng sinh mã sinh viên tự động (Auto-generate StudentId):
+    * Cấu trúc mã 10 chữ số: [Năm nhập học: 21][Hệ đào tạo: 21][Mã số ngành: 2 chữ số][Số thứ tự: 4 chữ số].
+    * Tích hợp AJAX trên giao diện Create: Khi người dùng chọn Khoa trên form, hệ thống tự động gọi API GetNextStudentId để sinh mã tức thời và điền vào form (Ví dụ: 2121050001, 2121050002...).
+    * Tự động sinh mã phía server nếu người dùng để trống.
+  + Thực hiện Migration Add_Faculty_And_ForeignKey và cập nhật cơ sở dữ liệu SQLite App.db.
+  + Tối ưu hóa giao diện (UI/UX) và cơ chế nhập liệu thông minh cho Form Sinh viên:
+    * Giao diện tinh gọn, thoáng đãng: Loại bỏ các dòng chữ hướng dẫn rườm rà dưới các ô input.
+    * Thêm ô nhập nhanh mã Khoa ngay cạnh Dropdown (hỗ trợ gõ mã số 05, 01... hoặc mã chữ CNTT, MO...) tự động trỏ đúng Khoa.
+    * Tự động nhận diện Khoa từ Mã SV: Khi người dùng tự nhập mã sinh viên (cả chuẩn 10 số HUMG như 2221050629, 2821050743 lẫn dạng rút gọn 2205...), hệ thống tự động suy ra mã ngành "05" và chọn đúng Khoa Công nghệ thông tin, phân biệt rõ ràng không bị nhầm sang khoa Cơ - Điện (06).
+    * Thuật toán sinh mã tự động thích ứng tiền tố (Prefix Adaptive): Tự động phát hiện mã sinh viên mới nhất của khoa để giữ nguyên 6 số đầu (Năm + Hệ + Ngành) và chỉ tăng 1 đơn vị cho số thứ tự (STT: 4 số cuối), ví dụ 2221050629 -> 2221050630, 2821050743 -> 2821050744.

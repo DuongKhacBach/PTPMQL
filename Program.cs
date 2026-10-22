@@ -17,21 +17,14 @@ builder.Services.AddControllersWithViews();
 
 var app = builder.Build();
 
-// Đảm bảo cấu trúc bảng trong CSDL SQLite luôn đồng bộ và hợp lệ
+// Đảm bảo cấu trúc bảng trong CSDL SQLite luôn đồng bộ với Migrations
+// (tự động tạo bảng Students: StudentId, FullName, Faculty, PhoneNumber)
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     try
     {
-        // Tự động tạo bảng Employees với 4 trường: EmployeeId, FullName, Age, Address
-        dbContext.Database.ExecuteSqlRaw(@"
-            CREATE TABLE IF NOT EXISTS ""Employees"" (
-                ""EmployeeId"" TEXT NOT NULL PRIMARY KEY,
-                ""FullName"" TEXT NOT NULL,
-                ""Age"" INTEGER NOT NULL,
-                ""Address"" TEXT NULL
-            );
-        ");
+        dbContext.Database.Migrate();
     }
     catch (Exception ex)
     {
@@ -53,9 +46,21 @@ app.UseRouting();
 
 app.UseAuthorization();
 
-// Route mặc định: Controller=Employee -> Action=Index
+// 1. Route cho: /sinhvien, /sinhvien/Index, /sinhvien/Create, /sinhvien/Edit/{id}...
+app.MapControllerRoute(
+    name: "sinhvien",
+    pattern: "sinhvien/{action=Index}/{id?}",
+    defaults: new { controller = "Student" });
+
+// 2. Route cho: /Index (truy cập thẳng Index của Student)
+app.MapControllerRoute(
+    name: "directIndex",
+    pattern: "Index",
+    defaults: new { controller = "Student", action = "Index" });
+
+// 3. Route mặc định: / hoặc /{controller}/{action}/{id?}
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Employee}/{action=Index}/{id?}");
+    pattern: "{controller=Student}/{action=Index}/{id?}");
 
 app.Run();

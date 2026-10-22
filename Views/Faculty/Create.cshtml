@@ -1,0 +1,59 @@
+@model DemoMVC.Models.Faculty
+
+@{
+    ViewData["Title"] = "Thêm mới Khoa";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-6 col-md-8 col-12">
+        <div class="card shadow-sm border-0 rounded-3">
+            <div class="card-header bg-white py-3 border-bottom d-flex align-items-center gap-3">
+                <div class="bg-primary-subtle text-primary rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
+                    <i class="bi bi-building-add fs-5"></i>
+                </div>
+                <div>
+                    <h5 class="fw-bold text-dark mb-0">Thêm mới Khoa</h5>
+                    <small class="text-muted">Nhập thông tin khoa của Trường Đại học Mỏ - Địa chất</small>
+                </div>
+            </div>
+
+            <div class="card-body p-4">
+                <form asp-action="Create">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 small" role="alert"></div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label asp-for="FacultyId" class="form-label fw-semibold text-dark small"></label>
+                            <input asp-for="FacultyId" class="form-control" placeholder="VD: CNTT, MO, DC..." autofocus />
+                            <span asp-validation-for="FacultyId" class="text-danger small mt-1 d-block"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="FacultyCode" class="form-label fw-semibold text-dark small"></label>
+                            <input asp-for="FacultyCode" class="form-control" maxlength="2" placeholder="2 số, VD: 05, 01..." />
+                            <span asp-validation-for="FacultyCode" class="text-danger small mt-1 d-block"></span>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="FacultyName" class="form-label fw-semibold text-dark small"></label>
+                        <input asp-for="FacultyName" class="form-control" placeholder="VD: Công nghệ thông tin..." />
+                        <span asp-validation-for="FacultyName" class="text-danger small mt-1 d-block"></span>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                        <a asp-action="Index" class="btn btn-outline-secondary px-3 py-2 rounded-2">
+                            <i class="bi bi-arrow-left me-1"></i> Quay lại
+                        </a>
+                        <button type="submit" class="btn btn-primary px-4 py-2 rounded-2 shadow-sm">
+                            <i class="bi bi-check-lg me-1"></i> Lưu Khoa
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

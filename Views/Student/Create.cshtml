@@ -1,0 +1,254 @@
+@model DemoMVC.Models.Student
+
+@{
+    ViewData["Title"] = "Thêm mới Sinh viên";
+    var faculties = ViewBag.Faculties as IEnumerable<DemoMVC.Models.Faculty> ?? Enumerable.Empty<DemoMVC.Models.Faculty>();
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-7 col-md-9 col-12">
+        <div class="card shadow-sm border-0 rounded-3">
+            <!-- Header Form -->
+            <div class="card-header bg-white py-3 border-bottom d-flex align-items-center gap-3">
+                <div class="bg-primary-subtle text-primary rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
+                    <i class="bi bi-person-plus-fill fs-5"></i>
+                </div>
+                <div>
+                    <h5 class="fw-bold text-dark mb-0">Thêm mới Sinh viên</h5>
+                    <small class="text-muted">Quản lý sinh viên theo Khoa & Ngành đào tạo ĐH Mỏ - Địa chất</small>
+                </div>
+            </div>
+
+            <!-- Body Form -->
+            <div class="card-body p-4">
+                <form asp-action="Create" autocomplete="off">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 small" role="alert"></div>
+
+                    <!-- Row 1: Khoa & Mã SV -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label asp-for="FacultyId" class="form-label fw-semibold text-dark small">Khoa</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light text-muted border-end-0">
+                                    <i class="bi bi-building"></i>
+                                </span>
+                                <input type="text" id="facultyQuickInput" class="form-control text-uppercase font-monospace text-center fw-bold" 
+                                       style="max-width: 90px;" placeholder="05..." title="Nhập nhanh mã số (05, 01...) hoặc mã chữ (CNTT, MO...)" />
+                                <select asp-for="FacultyId" class="form-select border-start-0" id="facultySelect" required>
+                                    <option value="" data-code="">-- Chọn Khoa --</option>
+                                    @foreach (var f in faculties)
+                                    {
+                                        <option value="@f.FacultyId" data-code="@f.FacultyCode">
+                                            @f.FacultyCode · @f.FacultyName
+                                        </option>
+                                    }
+                                </select>
+                            </div>
+                            <span asp-validation-for="FacultyId" class="text-danger small mt-1 d-block"></span>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label asp-for="StudentId" class="form-label fw-semibold text-dark small d-flex justify-content-between align-items-center">
+                                <span>Mã sinh viên</span>
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size: 0.7rem;">
+                                    Tự nhập hoặc Tự sinh
+                                </span>
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light text-muted border-end-0">
+                                    <i class="bi bi-person-badge"></i>
+                                </span>
+                                <input asp-for="StudentId" class="form-control border-start-0 ps-2 font-monospace fw-bold text-primary" 
+                                       id="studentIdInput" placeholder="VD: 2221050629 (10 số)..." maxlength="10" />
+                                <button type="button" class="btn btn-outline-primary btn-sm px-3" id="btnAutoGenerate" title="Tự động sinh mã tiếp theo">
+                                    <i class="bi bi-magic me-1"></i> Sinh mã
+                                </button>
+                            </div>
+                            <span asp-validation-for="StudentId" class="text-danger small mt-1 d-block"></span>
+                        </div>
+                    </div>
+
+                    <!-- Row 2: Họ và tên -->
+                    <div class="mb-3">
+                        <label asp-for="FullName" class="form-label fw-semibold text-dark small"></label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light text-muted border-end-0">
+                                <i class="bi bi-person"></i>
+                            </span>
+                            <input asp-for="FullName" class="form-control border-start-0 ps-0" placeholder="Nhập họ và tên đầy đủ..." />
+                        </div>
+                        <span asp-validation-for="FullName" class="text-danger small mt-1 d-block"></span>
+                    </div>
+
+                    <!-- Row 3: Số điện thoại -->
+                    <div class="mb-4">
+                        <label asp-for="PhoneNumber" class="form-label fw-semibold text-dark small"></label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light text-muted border-end-0">
+                                <i class="bi bi-telephone"></i>
+                            </span>
+                            <input asp-for="PhoneNumber" type="tel" class="form-control border-start-0 ps-0" placeholder="Ví dụ: 0912345678" />
+                        </div>
+                        <span asp-validation-for="PhoneNumber" class="text-danger small mt-1 d-block"></span>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                        <a asp-action="Index" class="btn btn-outline-secondary px-3 py-2 rounded-2">
+                            <i class="bi bi-arrow-left me-1"></i> Quay lại danh sách
+                        </a>
+                        <button type="submit" class="btn btn-primary px-4 py-2 rounded-2 shadow-sm">
+                            <i class="bi bi-check-lg me-1"></i> Lưu thông tin
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script>
+        $(document).ready(function () {
+            // Danh sách khoa lấy từ DB: Code (05) -> Id (CNTT)
+            var codeToFacultyMap = {};
+            var idToCodeMap = {};
+
+            $('#facultySelect option').each(function () {
+                var fId = $(this).val();
+                var fCode = $(this).data('code');
+                if (fId && fCode) {
+                    codeToFacultyMap[String(fCode).padStart(2, '0')] = fId;
+                    idToCodeMap[fId] = String(fCode).padStart(2, '0');
+                }
+            });
+
+            var isAutoFilling = false;
+
+            // 1. KHI NGƯỜI DÙNG TỰ NHẬP MÃ SINH VIÊN (Ví dụ: 2221050629, 2821050743, hoặc 2205...)
+            $('#studentIdInput').on('input', function () {
+                if (isAutoFilling) return;
+                var val = $(this).val().trim();
+                if (val.length < 4) return;
+
+                var matchedFacultyId = null;
+
+                // TH 1: Định dạng rút gọn [Năm: 2 số][Ngành: 2 số bắt đầu bằng 0 (01-09)]... -> Ví dụ: 2205... -> "05" (CNTT)
+                // Ưu tiên kiểm tra nếu ký tự thứ 3 là '0' (mã ngành từ 01 đến 09)
+                if (val.length >= 4 && val.charAt(2) === '0') {
+                    var codeAt2 = val.substring(2, 4);
+                    if (codeToFacultyMap[codeAt2]) {
+                        matchedFacultyId = codeToFacultyMap[codeAt2];
+                    }
+                }
+
+                // TH 2: Định dạng chuẩn 10 số HUMG [Năm: 2 số][Hệ: 2 số (21)][Ngành: 2 số (01-09)][STT: 4 số]
+                // Ví dụ: 2221050629, 2821050743 -> 2 số ngành nằm ở vị trí thứ 5 và 6 (index 4-5) -> "05" (CNTT)
+                if (!matchedFacultyId && val.length >= 6) {
+                    var codeAt4 = val.substring(4, 6);
+                    if (codeToFacultyMap[codeAt4]) {
+                        matchedFacultyId = codeToFacultyMap[codeAt4];
+                    }
+                }
+
+                // Cập nhật Khoa tương ứng nếu tìm thấy
+                if (matchedFacultyId) {
+                    if ($('#facultySelect').val() !== matchedFacultyId) {
+                        $('#facultySelect').val(matchedFacultyId);
+                        $('#facultyQuickInput').val(idToCodeMap[matchedFacultyId] || matchedFacultyId);
+                    }
+                }
+            });
+
+            // 2. KHI GÕ NHANH MÃ KHOA VÀO Ô NHỎ (Hỗ trợ: "05", "5", "CNTT", "MO"...)
+            $('#facultyQuickInput').on('input', function () {
+                var keyword = $(this).val().trim().toUpperCase();
+                if (!keyword) return;
+
+                var matchedId = null;
+
+                // Nếu nhập số: 5 hoặc 05 -> chuẩn hóa thành 2 số "05"
+                if (/^\d{1,2}$/.test(keyword)) {
+                    var pad = keyword.padStart(2, '0');
+                    if (codeToFacultyMap[pad]) {
+                        matchedId = codeToFacultyMap[pad];
+                    }
+                }
+
+                // Nếu nhập mã chữ: CNTT, MO, DC, KT...
+                if (!matchedId) {
+                    $('#facultySelect option').each(function () {
+                        var optVal = $(this).val().toUpperCase();
+                        if (optVal === keyword) {
+                            matchedId = $(this).val();
+                            return false;
+                        }
+                    });
+                }
+
+                if (matchedId) {
+                    $('#facultySelect').val(matchedId);
+                    // Nếu ô mã SV đang trống thì tự sinh mã tiếp theo cho khoa này
+                    if (!$('#studentIdInput').val()) {
+                        triggerAutoGenerate();
+                    }
+                }
+            });
+
+            // 3. KHI CHỌN KHOA TỪ DROPDOWN
+            $('#facultySelect').on('change', function () {
+                var selectedId = $(this).val();
+                if (selectedId && idToCodeMap[selectedId]) {
+                    $('#facultyQuickInput').val(idToCodeMap[selectedId]);
+                } else {
+                    $('#facultyQuickInput').val('');
+                }
+
+                // Nếu ô mã SV đang trống thì tự động sinh mã cho khoa này
+                if (!$('#studentIdInput').val()) {
+                    triggerAutoGenerate();
+                }
+            });
+
+            // 4. KHI BẤM NÚT "SINH MÃ"
+            $('#btnAutoGenerate').on('click', function () {
+                triggerAutoGenerate(true);
+            });
+
+            function triggerAutoGenerate(force) {
+                var facultyId = $('#facultySelect').val();
+                if (!facultyId) {
+                    if (force) {
+                        alert('Vui lòng chọn Khoa trước để sinh mã tự động!');
+                    }
+                    return;
+                }
+
+                isAutoFilling = true;
+                $('#studentIdInput').val('Đang tạo mã...');
+
+                $.ajax({
+                    url: '@Url.Action("GetNextStudentId", "Student")',
+                    type: 'GET',
+                    data: { facultyId: facultyId },
+                    success: function (res) {
+                        if (res && res.studentId) {
+                            $('#studentIdInput').val(res.studentId);
+                        } else {
+                            $('#studentIdInput').val('');
+                            if (res && res.message) {
+                                alert(res.message);
+                            }
+                        }
+                        isAutoFilling = false;
+                    },
+                    error: function () {
+                        $('#studentIdInput').val('');
+                        isAutoFilling = false;
+                    }
+                });
+            }
+        });
+    </script>
+}
