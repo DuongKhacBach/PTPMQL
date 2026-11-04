@@ -14,14 +14,20 @@ namespace DemoMVC.Controllers
             _context = context;
         }
 
-        // GET: /Faculty
-        public async Task<IActionResult> Index()
+        // GET: /Faculty?pageNumber=1&pageSize=5
+        public async Task<IActionResult> Index(int? pageNumber, int? pageSize)
         {
-            var faculties = await _context.Faculty
+            int currentPageSize = pageSize ?? 5;
+            int currentPageNumber = pageNumber ?? 1;
+            ViewData["CurrentPageSize"] = currentPageSize;
+
+            var query = _context.Faculty
                 .Include(f => f.Students)
                 .OrderBy(f => f.FacultyCode)
-                .ToListAsync();
-            return View(faculties);
+                .AsNoTracking();
+
+            var paginatedFaculties = await PaginatedList<Faculty>.CreateAsync(query, currentPageNumber, currentPageSize);
+            return View(paginatedFaculties);
         }
 
         // GET: /Faculty/Create

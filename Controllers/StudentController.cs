@@ -17,14 +17,18 @@ namespace DemoMVC.Controllers
         }
 
         // =======================================================
-        // 1. READ (Xem danh sách với LINQ: Tìm kiếm, Sắp xếp & Include Khoa)
+        // 1. READ (Xem danh sách với LINQ: Tìm kiếm, Sắp xếp, Phân trang & Include Khoa)
         // =======================================================
-        // GET: /Student?searchString=...&sortOrder=...
+        // GET: /Student?searchString=...&sortOrder=...&pageNumber=1&pageSize=5
         [HttpGet]
-        public async Task<IActionResult> Index(string? searchString, string? sortOrder)
+        public async Task<IActionResult> Index(string? searchString, string? sortOrder, int? pageNumber, int? pageSize)
         {
+            int currentPageSize = pageSize ?? 5;
+            int currentPageNumber = pageNumber ?? 1;
+
             ViewData["CurrentFilter"] = searchString;
             ViewData["CurrentSort"] = sortOrder;
+            ViewData["CurrentPageSize"] = currentPageSize;
             ViewData["NameSortParm"] = string.IsNullOrEmpty(sortOrder) ? "name_desc" : "";
             ViewData["FacultySortParm"] = sortOrder == "faculty_asc" ? "faculty_desc" : "faculty_asc";
             ViewData["IdSortParm"] = sortOrder == "id_desc" ? "id_asc" : "id_desc";
@@ -32,6 +36,7 @@ namespace DemoMVC.Controllers
             // 1. Truy vấn LINQ có Eager Loading bảng Khoa (Include(s => s.Faculty))
             var query = _context.Student
                 .Include(s => s.Faculty)
+                .AsNoTracking()
                 .AsQueryable();
 
             // 2. LINQ Filtering (Where, Contains): Lọc theo Tên, Mã SV, Tên Khoa hoặc SĐT
@@ -55,8 +60,9 @@ namespace DemoMVC.Controllers
                 _ => query.OrderBy(s => s.FullName)
             };
 
-            var students = await query.ToListAsync();
-            return View(students);
+            // 4. LINQ Pagination (Skip & Take qua PaginatedList)
+            var paginatedStudents = await PaginatedList<Student>.CreateAsync(query, currentPageNumber, currentPageSize);
+            return View(paginatedStudents);
         }
 
         // =======================================================

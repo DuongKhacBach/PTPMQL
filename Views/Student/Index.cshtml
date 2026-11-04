@@ -1,9 +1,11 @@
-@model IEnumerable<DemoMVC.Models.Student>
+@model DemoMVC.Models.PaginatedList<DemoMVC.Models.Student>
 
 @{
     ViewData["Title"] = "Quản lý Sinh viên";
     var currentFilter = ViewData["CurrentFilter"] as string;
     var currentSort = ViewData["CurrentSort"] as string;
+    var currentPageSize = ViewData["CurrentPageSize"] is int ps ? ps : (Model?.PageSize ?? 5);
+    int[] pageSizeOptions = new[] { 5, 10, 20, 50 };
 }
 
 <div class="card shadow-sm border-0 rounded-3">
@@ -17,7 +19,7 @@
                 <div>
                     <h5 class="fw-bold text-dark mb-0">Danh sách Sinh viên</h5>
                     <small class="text-muted">
-                        Tìm thấy <strong>@(Model?.Count() ?? 0)</strong> sinh viên 
+                        Tìm thấy <strong>@(Model?.TotalItems ?? 0)</strong> sinh viên 
                         @if (!string.IsNullOrEmpty(currentFilter))
                         {
                             <span>với từ khóa <mark class="px-1 rounded">"@currentFilter"</mark></span>
@@ -35,7 +37,7 @@
             </div>
         </div>
 
-        <!-- Thanh tìm kiếm sử dụng LINQ (GET Form) -->
+        <!-- Thanh tìm kiếm & Chọn số dòng/trang sử dụng LINQ (GET Form) -->
         <form asp-action="Index" method="get" class="row g-2 align-items-center">
             <input type="hidden" name="sortOrder" value="@currentSort" />
             <div class="col-md-6 col-lg-5">
@@ -51,14 +53,25 @@
                     </button>
                     @if (!string.IsNullOrEmpty(currentFilter))
                     {
-                        <a asp-action="Index" class="btn btn-outline-secondary" title="Xóa tìm kiếm">
+                        <a asp-action="Index" asp-route-pageSize="@currentPageSize" class="btn btn-outline-secondary" title="Xóa tìm kiếm">
                             <i class="bi bi-x-lg"></i>
                         </a>
                     }
                 </div>
             </div>
-            <div class="col-md-6 col-lg-7 text-md-end text-muted small">
-                <i class="bi bi-info-circle me-1"></i> Bấm vào tiêu đề cột bên dưới để <strong>sắp xếp (LINQ Sort)</strong>
+            <div class="col-md-6 col-lg-7 d-flex flex-wrap justify-content-md-end align-items-center gap-3">
+                <div class="d-flex align-items-center gap-2 small text-muted">
+                    <label for="pageSizeSelect" class="mb-0 text-nowrap">Hiển thị:</label>
+                    <select id="pageSizeSelect" name="pageSize" class="form-select form-select-sm py-1" style="width: auto;" onchange="this.form.submit()">
+                        @foreach (var size in pageSizeOptions)
+                        {
+                            <option value="@size" selected="@(size == currentPageSize ? "selected" : null)">@size dòng / trang</option>
+                        }
+                    </select>
+                </div>
+                <div class="text-muted small d-none d-lg-block">
+                    <i class="bi bi-info-circle me-1"></i> Bấm tiêu đề cột để <strong>sắp xếp</strong>
+                </div>
             </div>
         </form>
     </div>
@@ -70,17 +83,17 @@
                 <thead class="table-light text-muted small text-uppercase">
                     <tr>
                         <th class="ps-3 py-2.5" style="width: 170px;">
-                            <a asp-action="Index" asp-route-sortOrder="@ViewData["IdSortParm"]" asp-route-searchString="@currentFilter" class="text-decoration-none text-muted d-inline-flex align-items-center gap-1">
+                            <a asp-action="Index" asp-route-sortOrder="@ViewData["IdSortParm"]" asp-route-searchString="@currentFilter" asp-route-pageSize="@currentPageSize" class="text-decoration-none text-muted d-inline-flex align-items-center gap-1">
                                 Mã SV <i class="bi bi-arrow-down-up text-secondary small"></i>
                             </a>
                         </th>
                         <th class="py-2.5">
-                            <a asp-action="Index" asp-route-sortOrder="@ViewData["NameSortParm"]" asp-route-searchString="@currentFilter" class="text-decoration-none text-muted d-inline-flex align-items-center gap-1">
+                            <a asp-action="Index" asp-route-sortOrder="@ViewData["NameSortParm"]" asp-route-searchString="@currentFilter" asp-route-pageSize="@currentPageSize" class="text-decoration-none text-muted d-inline-flex align-items-center gap-1">
                                 Họ và tên <i class="bi bi-arrow-down-up text-secondary small"></i>
                             </a>
                         </th>
                         <th class="py-2.5">
-                            <a asp-action="Index" asp-route-sortOrder="@ViewData["FacultySortParm"]" asp-route-searchString="@currentFilter" class="text-decoration-none text-muted d-inline-flex align-items-center gap-1">
+                            <a asp-action="Index" asp-route-sortOrder="@ViewData["FacultySortParm"]" asp-route-searchString="@currentFilter" asp-route-pageSize="@currentPageSize" class="text-decoration-none text-muted d-inline-flex align-items-center gap-1">
                                 Khoa (HUMG) <i class="bi bi-arrow-down-up text-secondary small"></i>
                             </a>
                         </th>
@@ -145,7 +158,7 @@
                                 {
                                     <span>Không tìm thấy sinh viên nào khớp với từ khóa "<strong>@currentFilter</strong>".</span>
                                     <div class="mt-2">
-                                        <a asp-action="Index" class="btn btn-sm btn-outline-secondary">
+                                        <a asp-action="Index" asp-route-pageSize="@currentPageSize" class="btn btn-sm btn-outline-secondary">
                                             <i class="bi bi-arrow-clockwise me-1"></i> Xóa bộ lọc tìm kiếm
                                         </a>
                                     </div>
@@ -166,4 +179,91 @@
             </table>
         </div>
     </div>
+
+    <!-- Thanh phân trang (Pagination Footer) -->
+    @if (Model != null && Model.TotalItems > 0)
+    {
+        <div class="card-footer bg-white py-3 border-top d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div class="text-muted small">
+                Hiển thị <strong>@Model.StartItemIndex</strong> - <strong>@Model.EndItemIndex</strong> trong tổng số <strong>@Model.TotalItems</strong> sinh viên
+                <span class="ms-1 text-secondary">(Trang @Model.PageIndex / @Model.TotalPages)</span>
+            </div>
+
+            @if (Model.TotalPages > 1)
+            {
+                int startPage = Math.Max(1, Model.PageIndex - 2);
+                int endPage = Math.Min(Model.TotalPages, startPage + 4);
+                if (endPage - startPage < 4)
+                {
+                    startPage = Math.Max(1, endPage - 4);
+                }
+
+                <nav aria-label="Phân trang danh sách sinh viên">
+                    <ul class="pagination pagination-sm mb-0">
+                        <!-- Trang đầu -->
+                        <li class="page-item @(Model.HasPreviousPage ? "" : "disabled")">
+                            <a class="page-link" asp-action="Index"
+                               asp-route-pageNumber="1"
+                               asp-route-pageSize="@currentPageSize"
+                               asp-route-sortOrder="@currentSort"
+                               asp-route-searchString="@currentFilter"
+                               title="Trang đầu">
+                                <i class="bi bi-chevron-double-left"></i>
+                            </a>
+                        </li>
+
+                        <!-- Trang trước -->
+                        <li class="page-item @(Model.HasPreviousPage ? "" : "disabled")">
+                            <a class="page-link" asp-action="Index"
+                               asp-route-pageNumber="@(Model.PageIndex - 1)"
+                               asp-route-pageSize="@currentPageSize"
+                               asp-route-sortOrder="@currentSort"
+                               asp-route-searchString="@currentFilter"
+                               title="Trang trước">
+                                <i class="bi bi-chevron-left"></i> Trước
+                            </a>
+                        </li>
+
+                        <!-- Danh sách các số trang -->
+                        @for (int i = startPage; i <= endPage; i++)
+                        {
+                            <li class="page-item @(i == Model.PageIndex ? "active" : "")">
+                                <a class="page-link" asp-action="Index"
+                                   asp-route-pageNumber="@i"
+                                   asp-route-pageSize="@currentPageSize"
+                                   asp-route-sortOrder="@currentSort"
+                                   asp-route-searchString="@currentFilter">
+                                    @i
+                                </a>
+                            </li>
+                        }
+
+                        <!-- Trang sau -->
+                        <li class="page-item @(Model.HasNextPage ? "" : "disabled")">
+                            <a class="page-link" asp-action="Index"
+                               asp-route-pageNumber="@(Model.PageIndex + 1)"
+                               asp-route-pageSize="@currentPageSize"
+                               asp-route-sortOrder="@currentSort"
+                               asp-route-searchString="@currentFilter"
+                               title="Trang sau">
+                                Sau <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+
+                        <!-- Trang cuối -->
+                        <li class="page-item @(Model.HasNextPage ? "" : "disabled")">
+                            <a class="page-link" asp-action="Index"
+                               asp-route-pageNumber="@Model.TotalPages"
+                               asp-route-pageSize="@currentPageSize"
+                               asp-route-sortOrder="@currentSort"
+                               asp-route-searchString="@currentFilter"
+                               title="Trang cuối">
+                                <i class="bi bi-chevron-double-right"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            }
+        </div>
+    }
 </div>
