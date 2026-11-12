@@ -285,4 +285,89 @@ Mẹo hữu ích cho sau này: Khi gặp lỗi The process cannot access the fil
 powershell :
 Stop-Process -Name "DemoMVC" - Force -ErrorAction SilentlyContinue 
 
+--------------------------------------------------------------------------------
+
+[TUẦN 11]
+- Ngày cập nhật: 12/11/2026
+- Nội dung tóm tắt:
+  + Hoàn thiện chức năng Xuất file Excel (.xlsx) danh sách Sinh viên bằng thư viện ClosedXML.
+  + Tích hợp và tùy chỉnh hệ thống Xác thực & Phân quyền chi tiết với ASP.NET Core Identity (.NET 10.0).
+  + Xây dựng chức năng Quản lý Quyền (RoleController) và Quản lý Tài khoản & Gán Quyền (AccountController).
+  + Phân quyền chi tiết trên StudentController, FacultyController và ẩn/hiện nút thao tác theo Role trên giao diện.
+  + Chi tiết các thành phần thực hiện:
+    * 1. Chức năng Xuất file Excel (ClosedXML) & Lọc theo Khoa trên StudentController:
+      - Bổ sung bộ lọc theo Khoa (facultyId) kết hợp Tìm kiếm (searchString), Sắp xếp (sortOrder) và Phân trang (PaginatedList<Student>).
+      - Hoàn thiện Action ExportExcel(string? searchString, string? facultyId, string? sortOrder):
+        + Truy vấn danh sách Students kèm Include(s => s.Faculty).AsNoTracking() theo đúng các tham số lọc hiện tại.
+        + Khởi tạo XLWorkbook, tạo sheet "DanhSachSinhVien" gồm 6 cột: STT, Mã Sinh Viên, Họ và Tên, Số Điện Thoại, Mã Khoa, Tên Khoa.
+        + Định dạng bảng chuyên nghiệp: In đậm tiêu đề, nền màu XLColor.LightSteelBlue, kẻ khung viền (OutsideBorder & InsideBorder), tự động căn chỉnh độ rộng cột (AdjustToContents()).
+        + Trả về file tải xuống định dạng DanhSachSinhVien_{yyyyMMdd_HHmm}.xlsx.
+    * 2. Tích hợp & Tùy chỉnh ASP.NET Core Identity:
+      - Cài đặt gói NuGet Microsoft.AspNetCore.Identity.EntityFrameworkCore (10.0.12) và Microsoft.AspNetCore.Identity.UI (10.0.12).
+      - Tạo lớp ApplicationUser kế thừa IdentityUser (Models/Entities/ApplicationUser.cs), mở rộng thêm thuộc tính FullName (Họ và tên).
+      - Cập nhật ApplicationDbContext kế thừa IdentityDbContext<ApplicationUser>, gọi base.OnModelCreating(modelBuilder) và giữ nguyên cấu hình khóa ngoại + Seed Data 9 Khoa HUMG.
+      - Xây dựng trọn bộ Razor Pages trong Areas/Identity/Pages/Account/:
+        + Login.cshtml (.cs): Đăng nhập với lockoutOnFailure: true (khóa tài khoản tạm thời 5 phút nếu nhập sai quá 5 lần).
+        + Register.cshtml (.cs): Đăng ký tài khoản có nhập và lưu FullName.
+        + Logout.cshtml (.cs) & AccessDenied.cshtml (.cs): Đăng xuất và trang thông báo từ chối truy cập.
+      - Tạo Views/Shared/_LoginPartial.cshtml hiển thị "Xin chào, [FullName]!" kèm nút Đăng xuất/Đăng nhập/Đăng ký và nhúng vào thanh Navbar trong _Layout.cshtml.
+      - Cấu hình IdentityOptions, ConfigureApplicationCookie (HttpOnly, ExpireTimeSpan = 60 phút, SlidingExpiration) và DataProtection (lưu khóa tại ./keys) trong Program.cs.
+    * 3. Quản lý Role (RoleController) & Gán quyền tài khoản (AccountController):
+      - Tạo ViewModels trong Models/ViewModels/: UserWithRoleVM, AssignRoleVM, RoleVM.
+      - RoleController ([Authorize(Roles = "Admin")]): Quản lý danh sách, thêm mới, chỉnh sửa và xóa Role thông qua RoleManager<IdentityRole>.
+      - AccountController ([Authorize(Roles = "Admin")]): Hiển thị danh sách người dùng kèm các Role hiện tại và màn hình AssignRole cho phép tích chọn gán/gỡ nhiều Role cùng lúc qua UserManager<ApplicationUser>.
+    * 4. Phân quyền chi tiết & Tự động Seed Data (Roles + Tài khoản mẫu):
+      - StudentController ([Authorize]):
+        + Index, Details: Admin, GiangVien, SinhVien.
+        + Create, Edit, ExportExcel, GetNextStudentId: Admin, GiangVien.
+        + Delete: Chỉ Admin.
+      - FacultyController ([Authorize]):
+        + Index, Details: Admin, GiangVien, SinhVien.
+        + Create, Edit, Delete: Chỉ Admin.
+      - Cập nhật giao diện theo User.IsInRole(...):
+        + Views/Student/Index.cshtml: Ẩn nút Thêm mới, Xuất Excel và Sửa đối với SinhVien; ẩn nút Xóa đối với GiangVien và SinhVien.
+        + Views/Faculty/Index.cshtml: Chỉ hiển thị nút Thêm, Sửa, Xóa Khoa khi đăng nhập quyền Admin.
+        + Views/Shared/_Layout.cshtml: Hiển thị thêm menu "Quản lý Tài khoản (/Account)" và "Quản lý Role (/Role)" cho Admin.
+      - Tự động Seed 3 Roles (Admin, GiangVien, SinhVien) và 3 tài khoản mặc định trong Program.cs:
+        + Admin: admin@humg.edu.vn / Admin1234 (Quản trị viên)
+        + Giảng viên: giangvien@humg.edu.vn / Giangvien123 (Giảng viên HUMG)
+        + Sinh viên: sinhvien@humg.edu.vn / Sinhvien123 (Sinh viên HUMG)
+      - Thực hiện Migration Add_Identity_And_Roles và cập nhật CSDL SQLite App.db.
+
+- Kiến thức & Định nghĩa cơ bản:
+  * Authentication (Xác thực) vs Authorization (Phân quyền):
+    - Authentication (Xác thực - Bạn là ai?): Quá trình kiểm tra danh tính người dùng thông qua thông tin đăng nhập (Email/Password) và cấp Cookie phiên đăng nhập (app.UseAuthentication()).
+    - Authorization (Phân quyền - Bạn được làm gì?): Quá trình kiểm tra người dùng đã xác thực có quyền truy cập vào tài nguyên hoặc thực hiện hành động cụ thể hay không thông qua [Authorize(Roles = "...")] (app.UseAuthorization()).
+    - Lưu ý thứ tự Middleware trong Program.cs: Bắt buộc đặt app.UseAuthentication(); TRƯỚC app.UseAuthorization();.
+  * Các thành phần cốt lõi của ASP.NET Core Identity:
+    - IdentityUser / ApplicationUser: Lớp đại diện cho tài khoản người dùng (lưu trong bảng AspNetUsers).
+    - IdentityRole: Lớp đại diện cho vai trò/nhóm quyền trong hệ thống (lưu trong bảng AspNetRoles).
+    - UserManager<TUser>: Dịch vụ quản lý vòng đời người dùng (tạo user, băm mật khẩu, kiểm tra/gán/gỡ Role).
+    - SignInManager<TUser>: Dịch vụ xử lý đăng nhập (PasswordSignInAsync), đăng xuất (SignOutAsync) và phát hành Cookie xác thực.
+    - RoleManager<TRole>: Dịch vụ quản lý tạo, sửa, xóa và kiểm tra sự tồn tại của các Role.
+  * ClosedXML (Xuất file Excel):
+    - Thư viện .NET mã nguồn mở xây dựng trên OpenXML giúp tạo, đọc và định dạng bảng tính Excel (.xlsx) trực tiếp trên bộ nhớ (MemoryStream) mà không cần cài đặt Microsoft Excel trên máy chủ.
+
+--------------------------------------------------------------------------------
+
+[MẸO ĐẨY CODE LÊN GITHUB NHANH]
+1. Dùng lệnh `git up` (Nhanh và tiện nhất - áp dụng cho mọi dự án trên máy):
+   - Đẩy nhanh (mặc định ghi chú là "Update code"):
+     git up
+   - Đẩy kèm nội dung ghi chú riêng:
+     git up "Nội dung cập nhật"
+
+2. Dùng file script `push.bat` (Có sẵn trong thư mục dự án):
+   - Đẩy nhanh (tự động lấy ngày giờ làm ghi chú):
+     .\push
+   - Đẩy kèm nội dung ghi chú riêng:
+     .\push "Nội dung cập nhật"
+
+3. Dùng giao diện Source Control trên VS Code:
+   - Bấm tổ hợp phím `Ctrl + Shift + G` -> Nhập ghi chú vào ô Message -> Bấm Commit & Push.
+
+4. Gõ bộ 3 lệnh Git truyền thống:
+   git add .
+   git commit -m "Nội dung cập nhật"
+   git push origin main
 
