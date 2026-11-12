@@ -1,0 +1,38 @@
+@using Microsoft.AspNetCore.Identity
+@using DemoMVC.Models
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+
+<ul class="navbar-nav align-items-lg-center gap-2">
+@if (SignInManager.IsSignedIn(User))
+{
+    var currentUser = await UserManager.GetUserAsync(User);
+    var displayName = !string.IsNullOrWhiteSpace(currentUser?.FullName) ? currentUser.FullName : User.Identity?.Name;
+    <li class="nav-item">
+        <span class="nav-link text-dark fw-semibold">
+            <i class="bi bi-person-circle text-primary me-1"></i>Xin chào, @displayName!
+        </span>
+    </li>
+    <li class="nav-item">
+        <form id="logoutForm" class="form-inline" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Action("Index", "Student", new { area = "" })">
+            <button id="logout" type="submit" class="btn btn-outline-danger btn-sm px-3 rounded-2">
+                <i class="bi bi-box-arrow-right me-1"></i>Đăng xuất
+            </button>
+        </form>
+    </li>
+}
+else
+{
+    <li class="nav-item">
+        <a class="btn btn-outline-primary btn-sm px-3 rounded-2" id="register" asp-area="Identity" asp-page="/Account/Register">
+            <i class="bi bi-person-plus me-1"></i>Đăng ký
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="btn btn-primary btn-sm px-3 rounded-2" id="login" asp-area="Identity" asp-page="/Account/Login">
+            <i class="bi bi-box-arrow-in-right me-1"></i>Đăng nhập
+        </a>
+    </li>
+}
+</ul>
+

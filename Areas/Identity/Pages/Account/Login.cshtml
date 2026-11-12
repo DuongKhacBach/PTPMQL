@@ -1,0 +1,74 @@
+@page
+@model LoginModel
+
+@{
+    ViewData["Title"] = "Đăng nhập hệ thống";
+}
+
+<div class="row justify-content-center mt-4">
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow-sm border-0 rounded-3">
+            <div class="card-header bg-white py-3 border-bottom text-center">
+                <div class="bg-primary text-white rounded-circle p-2 d-inline-flex align-items-center justify-content-center mb-2" style="width: 44px; height: 44px;">
+                    <i class="bi bi-shield-lock-fill fs-5"></i>
+                </div>
+                <h5 class="fw-bold text-dark mb-0">@ViewData["Title"]</h5>
+                <small class="text-muted">Sử dụng tài khoản HUMG để đăng nhập</small>
+            </div>
+            <div class="card-body p-4">
+                <form id="account" method="post">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 small" role="alert"></div>
+
+                    <div class="mb-3">
+                        <label asp-for="Input.Email" class="form-label fw-semibold small">Email</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="bi bi-envelope text-muted"></i></span>
+                            <input asp-for="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@humg.edu.vn" />
+                        </div>
+                        <span asp-validation-for="Input.Email" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Input.Password" class="form-label fw-semibold small">Mật khẩu</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="bi bi-key text-muted"></i></span>
+                            <input asp-for="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="Nhập mật khẩu..." />
+                        </div>
+                        <span asp-validation-for="Input.Password" class="text-danger small"></span>
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" asp-for="Input.RememberMe" />
+                        <label class="form-check-label small" asp-for="Input.RememberMe">
+                            @Html.DisplayNameFor(m => m.Input.RememberMe)
+                        </label>
+                    </div>
+
+                    <div class="d-grid mb-3">
+                        <button id="login-submit" type="submit" class="btn btn-primary py-2 fw-semibold">
+                            <i class="bi bi-box-arrow-in-right me-1"></i> Đăng nhập
+                        </button>
+                    </div>
+
+                    <div class="text-center small">
+                        <span class="text-muted">Chưa có tài khoản?</span>
+                        <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl" class="fw-semibold text-decoration-none">Đăng ký tài khoản mới</a>
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer bg-light py-3 border-top small">
+                <div class="fw-semibold text-secondary mb-1"><i class="bi bi-info-circle me-1"></i>Tài khoản mẫu kiểm thử:</div>
+                <ul class="mb-0 ps-3 text-muted">
+                    <li><strong>Admin:</strong> <code>admin@humg.edu.vn</code> / <code>Admin1234</code></li>
+                    <li><strong>Giảng viên:</strong> <code>giangvien@humg.edu.vn</code> / <code>Giangvien123</code></li>
+                    <li><strong>Sinh viên:</strong> <code>sinhvien@humg.edu.vn</code> / <code>Sinhvien123</code></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
+

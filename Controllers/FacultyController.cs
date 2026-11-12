@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using DemoMVC.Data;
@@ -5,6 +6,7 @@ using DemoMVC.Models;
 
 namespace DemoMVC.Controllers
 {
+    [Authorize]
     public class FacultyController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -15,6 +17,7 @@ namespace DemoMVC.Controllers
         }
 
         // GET: /Faculty?pageNumber=1&pageSize=5
+        [Authorize(Roles = "Admin,GiangVien,SinhVien")]
         public async Task<IActionResult> Index(int? pageNumber, int? pageSize)
         {
             int currentPageSize = pageSize ?? 5;
@@ -30,7 +33,24 @@ namespace DemoMVC.Controllers
             return View(paginatedFaculties);
         }
 
+        // GET: /Faculty/Details/{id}
+        [Authorize(Roles = "Admin,GiangVien,SinhVien")]
+        public async Task<IActionResult> Details(string? id)
+        {
+            if (id == null) return NotFound();
+
+            var faculty = await _context.Faculty
+                .Include(f => f.Students)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(m => m.FacultyId == id);
+
+            if (faculty == null) return NotFound();
+
+            return View(faculty);
+        }
+
         // GET: /Faculty/Create
+        [Authorize(Roles = "Admin")]
         public IActionResult Create()
         {
             return View();
@@ -39,6 +59,7 @@ namespace DemoMVC.Controllers
         // POST: /Faculty/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create([Bind("FacultyId,FacultyCode,FacultyName")] Faculty faculty)
         {
             if (_context.Faculty.Any(f => f.FacultyId == faculty.FacultyId))
@@ -60,6 +81,7 @@ namespace DemoMVC.Controllers
         }
 
         // GET: /Faculty/Edit/{id}
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Edit(string? id)
         {
             if (id == null) return NotFound();
@@ -73,6 +95,7 @@ namespace DemoMVC.Controllers
         // POST: /Faculty/Edit/{id}
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Edit(string id, [Bind("FacultyId,FacultyCode,FacultyName")] Faculty faculty)
         {
             if (id != faculty.FacultyId) return NotFound();
@@ -95,6 +118,7 @@ namespace DemoMVC.Controllers
         }
 
         // GET: /Faculty/Delete/{id}
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(string? id)
         {
             if (id == null) return NotFound();
@@ -111,6 +135,7 @@ namespace DemoMVC.Controllers
         // POST: /Faculty/Delete/{id}
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteConfirmed(string id)
         {
             var faculty = await _context.Faculty

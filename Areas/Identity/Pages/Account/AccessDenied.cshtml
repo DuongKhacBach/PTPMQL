@@ -1,0 +1,28 @@
+@page
+@model AccessDeniedModel
+@{
+    ViewData["Title"] = "Từ chối truy cập";
+}
+
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6 text-center">
+        <div class="card shadow-sm border-0 rounded-3 p-4">
+            <div class="text-danger mb-3">
+                <i class="bi bi-shield-exclamation display-3"></i>
+            </div>
+            <h4 class="fw-bold text-danger">@ViewData["Title"]</h4>
+            <p class="text-muted mb-4">
+                Tài khoản của bạn không có quyền thực hiện chức năng này hoặc truy cập vào trang này.
+            </p>
+            <div class="d-flex justify-content-center gap-2">
+                <a asp-controller="Student" asp-action="Index" class="btn btn-primary btn-sm px-3">
+                    <i class="bi bi-arrow-left me-1"></i> Về Danh sách Sinh viên
+                </a>
+                <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary btn-sm px-3">
+                    <i class="bi bi-house-door me-1"></i> Trang chủ
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+

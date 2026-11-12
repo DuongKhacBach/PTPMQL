@@ -1,0 +1,38 @@
+@model Microsoft.AspNetCore.Identity.IdentityRole
+
+@{
+    ViewData["Title"] = "Chỉnh sửa Role";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow-sm border-0 rounded-3">
+            <div class="card-header bg-white py-3 border-bottom">
+                <h5 class="fw-bold text-dark mb-0">
+                    <i class="bi bi-pencil-square text-warning me-2"></i>@ViewData["Title"]
+                </h5>
+            </div>
+            <div class="card-body p-4">
+                <form asp-action="Edit" method="post">
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <div asp-validation-summary="All" class="text-danger small mb-3"></div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small">Role ID</label>
+                        <input type="text" class="form-control font-monospace bg-light" value="@Model.Id" disabled />
+                    </div>
+                    <div class="mb-3">
+                        <label for="roleName" class="form-label fw-semibold small">Tên Role</label>
+                        <input type="text" id="roleName" name="roleName" value="@Model.Name" class="form-control" required />
+                    </div>
+                    <div class="d-flex justify-content-end gap-2">
+                        <a asp-action="Index" class="btn btn-outline-secondary btn-sm px-3">Hủy</a>
+                        <button type="submit" class="btn btn-warning btn-sm px-3">
+                            <i class="bi bi-save me-1"></i> Cập nhật
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+

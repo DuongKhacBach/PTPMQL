@@ -3,9 +3,25 @@
 @{
     ViewData["Title"] = "Quản lý Sinh viên";
     var currentFilter = ViewData["CurrentFilter"] as string;
+    var currentFaculty = ViewData["CurrentFaculty"] as string;
     var currentSort = ViewData["CurrentSort"] as string;
     var currentPageSize = ViewData["CurrentPageSize"] is int ps ? ps : (Model?.PageSize ?? 5);
     int[] pageSizeOptions = new[] { 5, 10, 20, 50 };
+}
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show shadow-sm border-0 rounded-3 mb-3" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>@TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show shadow-sm border-0 rounded-3 mb-3" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>@TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
 }
 
 <div class="card shadow-sm border-0 rounded-3">
@@ -27,20 +43,36 @@
                     </small>
                 </div>
             </div>
-            <div class="d-flex gap-2">
+            <div class="d-flex flex-wrap gap-2">
+                @if (User.IsInRole("Admin") || User.IsInRole("GiangVien"))
+                {
+                    <button type="button" class="btn btn-outline-success btn-sm px-3 rounded-2" data-bs-toggle="modal" data-bs-target="#importExcelModal">
+                        <i class="bi bi-upload me-1"></i> Nhập Excel (Upload)
+                    </button>
+                    <a asp-action="ExportExcel"
+                       asp-route-searchString="@currentFilter"
+                       asp-route-facultyId="@currentFaculty"
+                       asp-route-sortOrder="@currentSort"
+                       class="btn btn-success btn-sm px-3 rounded-2">
+                        <i class="bi bi-file-earmark-excel me-1"></i> Xuất Excel
+                    </a>
+                }
                 <a asp-controller="Faculty" asp-action="Index" class="btn btn-outline-primary btn-sm px-3 rounded-2">
                     <i class="bi bi-building me-1"></i> Quản lý Khoa
                 </a>
-                <a asp-action="Create" class="btn btn-primary btn-sm px-3 rounded-2">
-                    <i class="bi bi-plus-lg me-1"></i> Thêm mới
-                </a>
+                @if (User.IsInRole("Admin") || User.IsInRole("GiangVien"))
+                {
+                    <a asp-action="Create" class="btn btn-primary btn-sm px-3 rounded-2">
+                        <i class="bi bi-plus-lg me-1"></i> Thêm mới
+                    </a>
+                }
             </div>
         </div>
 
-        <!-- Thanh tìm kiếm & Chọn số dòng/trang sử dụng LINQ (GET Form) -->
+        <!-- Thanh tìm kiếm, Lọc Khoa & Chọn số dòng/trang sử dụng LINQ (GET Form) -->
         <form asp-action="Index" method="get" class="row g-2 align-items-center">
             <input type="hidden" name="sortOrder" value="@currentSort" />
-            <div class="col-md-6 col-lg-5">
+            <div class="col-md-5 col-lg-4">
                 <div class="input-group input-group-sm">
                     <span class="input-group-text bg-light text-muted border-end-0">
                         <i class="bi bi-search"></i>
@@ -51,7 +83,7 @@
                     <button type="submit" class="btn btn-primary px-3">
                         Tìm kiếm
                     </button>
-                    @if (!string.IsNullOrEmpty(currentFilter))
+                    @if (!string.IsNullOrEmpty(currentFilter) || !string.IsNullOrEmpty(currentFaculty))
                     {
                         <a asp-action="Index" asp-route-pageSize="@currentPageSize" class="btn btn-outline-secondary" title="Xóa tìm kiếm">
                             <i class="bi bi-x-lg"></i>
@@ -59,7 +91,12 @@
                     }
                 </div>
             </div>
-            <div class="col-md-6 col-lg-7 d-flex flex-wrap justify-content-md-end align-items-center gap-3">
+            <div class="col-md-3 col-lg-3">
+                <select name="facultyId" asp-items="ViewBag.FacultyList" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">-- Tất cả Khoa --</option>
+                </select>
+            </div>
+            <div class="col-md-4 col-lg-5 d-flex flex-wrap justify-content-md-end align-items-center gap-3">
                 <div class="d-flex align-items-center gap-2 small text-muted">
                     <label for="pageSizeSelect" class="mb-0 text-nowrap">Hiển thị:</label>
                     <select id="pageSizeSelect" name="pageSize" class="form-select form-select-sm py-1" style="width: auto;" onchange="this.form.submit()">
@@ -69,7 +106,7 @@
                         }
                     </select>
                 </div>
-                <div class="text-muted small d-none d-lg-block">
+                <div class="text-muted small d-none d-xl-block">
                     <i class="bi bi-info-circle me-1"></i> Bấm tiêu đề cột để <strong>sắp xếp</strong>
                 </div>
             </div>
@@ -83,17 +120,17 @@
                 <thead class="table-light text-muted small text-uppercase">
                     <tr>
                         <th class="ps-3 py-2.5" style="width: 170px;">
-                            <a asp-action="Index" asp-route-sortOrder="@ViewData["IdSortParm"]" asp-route-searchString="@currentFilter" asp-route-pageSize="@currentPageSize" class="text-decoration-none text-muted d-inline-flex align-items-center gap-1">
+                            <a asp-action="Index" asp-route-sortOrder="@ViewData["IdSortParm"]" asp-route-searchString="@currentFilter" asp-route-facultyId="@currentFaculty" asp-route-pageSize="@currentPageSize" class="text-decoration-none text-muted d-inline-flex align-items-center gap-1">
                                 Mã SV <i class="bi bi-arrow-down-up text-secondary small"></i>
                             </a>
                         </th>
                         <th class="py-2.5">
-                            <a asp-action="Index" asp-route-sortOrder="@ViewData["NameSortParm"]" asp-route-searchString="@currentFilter" asp-route-pageSize="@currentPageSize" class="text-decoration-none text-muted d-inline-flex align-items-center gap-1">
+                            <a asp-action="Index" asp-route-sortOrder="@ViewData["NameSortParm"]" asp-route-searchString="@currentFilter" asp-route-facultyId="@currentFaculty" asp-route-pageSize="@currentPageSize" class="text-decoration-none text-muted d-inline-flex align-items-center gap-1">
                                 Họ và tên <i class="bi bi-arrow-down-up text-secondary small"></i>
                             </a>
                         </th>
                         <th class="py-2.5">
-                            <a asp-action="Index" asp-route-sortOrder="@ViewData["FacultySortParm"]" asp-route-searchString="@currentFilter" asp-route-pageSize="@currentPageSize" class="text-decoration-none text-muted d-inline-flex align-items-center gap-1">
+                            <a asp-action="Index" asp-route-sortOrder="@ViewData["FacultySortParm"]" asp-route-searchString="@currentFilter" asp-route-facultyId="@currentFaculty" asp-route-pageSize="@currentPageSize" class="text-decoration-none text-muted d-inline-flex align-items-center gap-1">
                                 Khoa (HUMG) <i class="bi bi-arrow-down-up text-secondary small"></i>
                             </a>
                         </th>
@@ -138,12 +175,18 @@
                                         <a asp-action="Details" asp-route-id="@item.StudentId" class="btn btn-outline-secondary btn-sm py-1 px-2" title="Chi tiết">
                                             <i class="bi bi-eye"></i>
                                         </a>
-                                        <a asp-action="Edit" asp-route-id="@item.StudentId" class="btn btn-outline-warning btn-sm py-1 px-2" title="Chỉnh sửa">
-                                            <i class="bi bi-pencil"></i>
-                                        </a>
-                                        <a asp-action="Delete" asp-route-id="@item.StudentId" class="btn btn-outline-danger btn-sm py-1 px-2" title="Xóa">
-                                            <i class="bi bi-trash"></i>
-                                        </a>
+                                        @if (User.IsInRole("Admin") || User.IsInRole("GiangVien"))
+                                        {
+                                            <a asp-action="Edit" asp-route-id="@item.StudentId" class="btn btn-outline-warning btn-sm py-1 px-2" title="Chỉnh sửa">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                        }
+                                        @if (User.IsInRole("Admin"))
+                                        {
+                                            <a asp-action="Delete" asp-route-id="@item.StudentId" class="btn btn-outline-danger btn-sm py-1 px-2" title="Xóa">
+                                                <i class="bi bi-trash"></i>
+                                            </a>
+                                        }
                                     </div>
                                 </td>
                             </tr>
@@ -154,9 +197,9 @@
                         <tr>
                             <td colspan="5" class="text-center text-muted py-5">
                                 <i class="bi bi-inbox fs-2 d-block text-secondary mb-2"></i>
-                                @if (!string.IsNullOrEmpty(currentFilter))
+                                @if (!string.IsNullOrEmpty(currentFilter) || !string.IsNullOrEmpty(currentFaculty))
                                 {
-                                    <span>Không tìm thấy sinh viên nào khớp với từ khóa "<strong>@currentFilter</strong>".</span>
+                                    <span>Không tìm thấy sinh viên nào khớp với bộ lọc hiện tại.</span>
                                     <div class="mt-2">
                                         <a asp-action="Index" asp-route-pageSize="@currentPageSize" class="btn btn-sm btn-outline-secondary">
                                             <i class="bi bi-arrow-clockwise me-1"></i> Xóa bộ lọc tìm kiếm
@@ -166,11 +209,14 @@
                                 else
                                 {
                                     <span>Chưa có dữ liệu sinh viên nào trong hệ thống.</span>
-                                    <div class="mt-2">
-                                        <a asp-action="Create" class="btn btn-sm btn-primary">
-                                            <i class="bi bi-plus-circle me-1"></i> Thêm sinh viên đầu tiên
-                                        </a>
-                                    </div>
+                                    @if (User.IsInRole("Admin") || User.IsInRole("GiangVien"))
+                                    {
+                                        <div class="mt-2">
+                                            <a asp-action="Create" class="btn btn-sm btn-primary">
+                                                <i class="bi bi-plus-circle me-1"></i> Thêm sinh viên đầu tiên
+                                            </a>
+                                        </div>
+                                    }
                                 }
                             </td>
                         </tr>
@@ -207,6 +253,7 @@
                                asp-route-pageSize="@currentPageSize"
                                asp-route-sortOrder="@currentSort"
                                asp-route-searchString="@currentFilter"
+                               asp-route-facultyId="@currentFaculty"
                                title="Trang đầu">
                                 <i class="bi bi-chevron-double-left"></i>
                             </a>
@@ -219,6 +266,7 @@
                                asp-route-pageSize="@currentPageSize"
                                asp-route-sortOrder="@currentSort"
                                asp-route-searchString="@currentFilter"
+                               asp-route-facultyId="@currentFaculty"
                                title="Trang trước">
                                 <i class="bi bi-chevron-left"></i> Trước
                             </a>
@@ -232,7 +280,8 @@
                                    asp-route-pageNumber="@i"
                                    asp-route-pageSize="@currentPageSize"
                                    asp-route-sortOrder="@currentSort"
-                                   asp-route-searchString="@currentFilter">
+                                   asp-route-searchString="@currentFilter"
+                                   asp-route-facultyId="@currentFaculty">
                                     @i
                                 </a>
                             </li>
@@ -245,6 +294,7 @@
                                asp-route-pageSize="@currentPageSize"
                                asp-route-sortOrder="@currentSort"
                                asp-route-searchString="@currentFilter"
+                               asp-route-facultyId="@currentFaculty"
                                title="Trang sau">
                                 Sau <i class="bi bi-chevron-right"></i>
                             </a>
@@ -257,6 +307,7 @@
                                asp-route-pageSize="@currentPageSize"
                                asp-route-sortOrder="@currentSort"
                                asp-route-searchString="@currentFilter"
+                               asp-route-facultyId="@currentFaculty"
                                title="Trang cuối">
                                 <i class="bi bi-chevron-double-right"></i>
                             </a>
@@ -267,3 +318,48 @@
         </div>
     }
 </div>
+
+@if (User.IsInRole("Admin") || User.IsInRole("GiangVien"))
+{
+    <!-- Modal Upload / Import Excel Danh sách Sinh viên -->
+    <div class="modal fade" id="importExcelModal" tabindex="-1" aria-labelledby="importExcelModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <form asp-controller="Student" asp-action="ImportExcel" method="post" enctype="multipart/form-data">
+                    @Html.AntiForgeryToken()
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title fw-bold" id="importExcelModalLabel">
+                            <i class="bi bi-file-earmark-arrow-up me-2"></i>Nhập danh sách Sinh viên từ Excel
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="mb-3">
+                            <label for="excelFileInput" class="form-label fw-semibold">Chọn file Excel (.xlsx) <span class="text-danger">*</span></label>
+                            <input type="file" id="excelFileInput" name="excelFile" class="form-control" accept=".xlsx" required />
+                            <div class="form-text text-muted mt-2">
+                                <i class="bi bi-info-circle me-1"></i>Hỗ trợ cả cấu trúc <strong>6 cột</strong> (tương thích file Xuất Excel: <code>STT | Mã SV | Họ và Tên | SĐT | Mã Khoa | Tên Khoa</code>) và <strong>4 cột</strong> (<code>Mã SV | Họ và Tên | SĐT | Mã Khoa</code>).
+                            </div>
+                        </div>
+
+                        <div class="p-3 bg-light rounded-3 border d-flex flex-wrap justify-content-between align-items-center gap-2">
+                            <div class="small">
+                                <div class="fw-semibold text-dark"><i class="bi bi-file-earmark-spreadsheet text-success me-1"></i>Chưa có file dữ liệu mẫu?</div>
+                                <span class="text-muted">Tải sẵn 100 sinh viên HUMG phân bổ đều 9 Khoa</span>
+                            </div>
+                            <a asp-controller="Student" asp-action="DownloadSampleExcel" class="btn btn-sm btn-outline-success fw-semibold">
+                                <i class="bi bi-download me-1"></i>Tải file mẫu 100 SV (.xlsx)
+                            </a>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-success btn-sm px-4">
+                            <i class="bi bi-cloud-arrow-up me-1"></i>Tải lên & Nhập dữ liệu
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}

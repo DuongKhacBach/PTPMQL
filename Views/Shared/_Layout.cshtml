@@ -50,6 +50,19 @@
                                 <i class="bi bi-building"></i> Quản lý Khoa
                             </a>
                         </li>
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-danger fw-semibold" asp-controller="Account" asp-action="Index">
+                                    <i class="bi bi-person-gear"></i> Quản lý Tài khoản
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link text-danger fw-semibold" asp-controller="Role" asp-action="Index">
+                                    <i class="bi bi-shield-lock"></i> Quản lý Role
+                                </a>
+                            </li>
+                        }
                         <li class="nav-item">
                             <a class="nav-link" asp-controller="Demo" asp-action="Index">
                                 <i class="bi bi-layers"></i> Demo
@@ -61,10 +74,8 @@
                             </a>
                         </li>
                     </ul>
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-2">
-                            <i class="bi bi-bootstrap-fill"></i> Bootstrap 5
-                        </span>
+                    <div class="d-flex align-items-center gap-3">
+                        <partial name="_LoginPartial" />
                     </div>
                 </div>
             </div>

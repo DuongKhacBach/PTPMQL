@@ -1,0 +1,94 @@
+@model IEnumerable<DemoMVC.Models.ViewModels.UserWithRoleVM>
+
+@{
+    ViewData["Title"] = "Quản lý Tài khoản & Phân quyền";
+}
+
+<div class="card shadow-sm border-0 rounded-3">
+    <div class="card-header bg-white py-3 border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div class="d-flex align-items-center gap-2">
+            <div class="bg-primary text-white rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
+                <i class="bi bi-person-gear fs-5"></i>
+            </div>
+            <div>
+                <h5 class="fw-bold text-dark mb-0">Danh sách Tài khoản Người dùng</h5>
+                <small class="text-muted">Tổng cộng <strong>@(Model?.Count() ?? 0)</strong> tài khoản trong hệ thống</small>
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-controller="Role" asp-action="Index" class="btn btn-outline-danger btn-sm px-3 rounded-2">
+                <i class="bi bi-shield-lock me-1"></i> Quản lý Role
+            </a>
+        </div>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success m-3 py-2 small" role="alert">
+            <i class="bi bi-check-circle-fill me-1"></i> @TempData["SuccessMessage"]
+        </div>
+    }
+
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light text-muted small text-uppercase">
+                    <tr>
+                        <th class="ps-3 py-2.5">Họ và tên</th>
+                        <th class="py-2.5">Email / Tài khoản</th>
+                        <th class="py-2.5">Quyền hiện tại (Roles)</th>
+                        <th class="text-end pe-3 py-2.5" style="width: 180px;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody class="border-top-0">
+                    @if (Model != null && Model.Any())
+                    {
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td class="ps-3 fw-semibold text-dark">
+                                    @(string.IsNullOrWhiteSpace(item.User.FullName) ? "Chưa cập nhật" : item.User.FullName)
+                                </td>
+                                <td>
+                                    <span class="font-monospace small text-primary">@item.User.Email</span>
+                                </td>
+                                <td>
+                                    @if (item.Roles != null && item.Roles.Any())
+                                    {
+                                        <div class="d-flex flex-wrap gap-1">
+                                            @foreach (var role in item.Roles)
+                                            {
+                                                var badgeClass = role == "Admin"
+                                                    ? "bg-danger-subtle text-danger border-danger-subtle"
+                                                    : role == "GiangVien"
+                                                        ? "bg-warning-subtle text-warning-emphasis border-warning-subtle"
+                                                        : "bg-info-subtle text-info-emphasis border-info-subtle";
+                                                <span class="badge @badgeClass border px-2 py-1">@role</span>
+                                            }
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small fst-italic">Chưa gán quyền</span>
+                                    }
+                                </td>
+                                <td class="text-end pe-3">
+                                    <a asp-action="AssignRole" asp-route-userId="@item.User.Id" class="btn btn-outline-primary btn-sm px-3">
+                                        <i class="bi bi-key me-1"></i> Gán Role
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-4">Chưa có tài khoản nào trong hệ thống.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
