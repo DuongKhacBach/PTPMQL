@@ -9,15 +9,16 @@
 .idea/
 .vscode/
 
-## Logs
+## Logs & Publish Output
 *.log
 publish/
 publish.zip
+keys/
 
-
-## SQLite Temp Files
+## SQLite Temp & Backup Files
 *.db-shm
 *.db-wal
+*.bak
 
 ## OS Files
 *.DS_Store

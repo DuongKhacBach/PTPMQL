@@ -5,44 +5,54 @@
 }
 
 <div class="row justify-content-center">
-    <div class="col-md-8 col-lg-7">
+    <div class="col-lg-6 col-md-8 col-12">
         <div class="card shadow-sm border-0 rounded-3">
-            <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
-                <h5 class="fw-bold text-dark mb-0">
-                    <i class="bi bi-building text-info me-2"></i>Chi tiết Khoa: @Model.FacultyName
-                </h5>
-                <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
-                    <i class="bi bi-arrow-left me-1"></i> Quay lại
-                </a>
+            <div class="card-header bg-white py-3 border-bottom d-flex align-items-center gap-3">
+                <div class="bg-info-subtle text-info rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
+                    <i class="bi bi-building fs-5"></i>
+                </div>
+                <div>
+                    <h5 class="fw-bold text-dark mb-0">Thông tin Chi tiết Khoa</h5>
+                    <small class="text-muted">Xem thông tin khoa đào tạo trong hệ thống</small>
+                </div>
             </div>
-            <div class="card-body">
-                <dl class="row mb-0">
-                    <dt class="col-sm-4 text-muted">Mã Khoa:</dt>
-                    <dd class="col-sm-8 fw-bold text-primary">@Model.FacultyId</dd>
 
-                    <dt class="col-sm-4 text-muted">Mã số ngành (2 số):</dt>
-                    <dd class="col-sm-8 font-monospace">@Model.FacultyCode</dd>
-
-                    <dt class="col-sm-4 text-muted">Tên Khoa:</dt>
-                    <dd class="col-sm-8 fw-semibold">@Model.FacultyName</dd>
-
-                    <dt class="col-sm-4 text-muted">Số lượng Sinh viên:</dt>
-                    <dd class="col-sm-8">
+            <div class="card-body p-4">
+                <div class="list-group list-group-flush border rounded-2">
+                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                        <span class="text-muted small fw-semibold"><i class="bi bi-hash me-2 text-primary"></i>Mã Khoa:</span>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 font-monospace">
+                            @Model.FacultyId
+                        </span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                        <span class="text-muted small fw-semibold"><i class="bi bi-123 me-2 text-secondary"></i>Mã số ngành (2 số):</span>
+                        <span class="badge bg-dark-subtle text-dark border px-2 py-1 font-monospace">@Model.FacultyCode</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                        <span class="text-muted small fw-semibold"><i class="bi bi-building me-2 text-secondary"></i>Tên Khoa:</span>
+                        <span class="fw-bold text-dark">@Model.FacultyName</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+                        <span class="text-muted small fw-semibold"><i class="bi bi-people me-2 text-secondary"></i>Số lượng Sinh viên:</span>
                         <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-2 py-1">
                             @(Model.Students?.Count ?? 0) sinh viên
                         </span>
-                    </dd>
-                </dl>
-            </div>
-            @if (User.IsInRole("Admin"))
-            {
-                <div class="card-footer bg-white py-3 border-top d-flex justify-content-end gap-2">
-                    <a asp-action="Edit" asp-route-id="@Model.FacultyId" class="btn btn-warning btn-sm">
-                        <i class="bi bi-pencil me-1"></i> Chỉnh sửa
-                    </a>
+                    </div>
                 </div>
-            }
+            </div>
+
+            <div class="card-footer bg-light d-flex justify-content-between py-3 rounded-bottom-3">
+                <a asp-action="Index" class="btn btn-outline-secondary px-3 py-2 rounded-2">
+                    <i class="bi bi-arrow-left me-1"></i> Quay lại danh sách
+                </a>
+                @if (User.IsInRole("Admin"))
+                {
+                    <a asp-action="Edit" asp-route-id="@Model.FacultyId" class="btn btn-warning px-3 py-2 rounded-2 fw-semibold text-dark">
+                        <i class="bi bi-pencil-square me-1"></i> Chỉnh sửa
+                    </a>
+                }
+            </div>
         </div>
     </div>
 </div>
-

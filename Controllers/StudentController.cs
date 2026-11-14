@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.RegularExpressions;
 using ClosedXML.Excel;
 using Microsoft.AspNetCore.Authorization;
@@ -13,6 +14,7 @@ namespace DemoMVC.Controllers
     public class StudentController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private static readonly StringComparer VietnameseComparer = StringComparer.Create(new CultureInfo("vi-VN"), ignoreCase: true);
 
         public StudentController(ApplicationDbContext context)
         {
@@ -40,10 +42,10 @@ namespace DemoMVC.Controllers
 
             await PopulateFacultyDropDownListAsync(facultyId);
 
-            var query = BuildStudentQuery(searchString, facultyId, sortOrder);
+            var sortedStudents = await GetFilteredAndSortedStudentsAsync(searchString, facultyId, sortOrder);
 
             // 4. LINQ Pagination (Skip & Take qua PaginatedList)
-            var paginatedStudents = await PaginatedList<Student>.CreateAsync(query, currentPageNumber, currentPageSize);
+            var paginatedStudents = PaginatedList<Student>.Create(sortedStudents, currentPageNumber, currentPageSize);
             return View(paginatedStudents);
         }
 
@@ -51,7 +53,7 @@ namespace DemoMVC.Controllers
         [Authorize(Roles = "Admin,GiangVien")]
         public async Task<IActionResult> ExportExcel(string? searchString, string? facultyId, string? sortOrder)
         {
-            var students = await BuildStudentQuery(searchString, facultyId, sortOrder).ToListAsync();
+            var students = await GetFilteredAndSortedStudentsAsync(searchString, facultyId, sortOrder);
 
             using var workbook = new XLWorkbook();
             var worksheet = workbook.Worksheets.Add("DanhSachSinhVien");
@@ -126,6 +128,7 @@ namespace DemoMVC.Controllers
                 var faculties = await _context.Faculty.AsNoTracking().ToListAsync();
                 var facultyById = faculties.ToDictionary(f => f.FacultyId.ToUpperInvariant(), f => f.FacultyId);
                 var facultyByCode = faculties.ToDictionary(f => f.FacultyCode, f => f.FacultyId);
+                var facultyByName = faculties.ToDictionary(f => f.FacultyName.Trim(), f => f.FacultyId, StringComparer.OrdinalIgnoreCase);
 
                 var existingStudents = await _context.Student.ToDictionaryAsync(
                     s => s.StudentId!,
@@ -175,11 +178,20 @@ namespace DemoMVC.Controllers
                         continue;
                     }
 
-                    // Chuẩn hóa SĐT nếu bị Excel cắt mất số 0 ở đầu
-                    if (phoneNumber.Length == 9 && phoneNumber.All(char.IsDigit))
+                    // Nếu cột 3/4 lại là tên Khoa hoặc mã Khoa (VD: file Excel chỉ có 3 cột: Mã SV | Họ tên | Khoa)
+                    if (string.IsNullOrWhiteSpace(rawFaculty) && !string.IsNullOrWhiteSpace(phoneNumber) && !phoneNumber.All(char.IsDigit))
                     {
-                        phoneNumber = "0" + phoneNumber;
+                        rawFaculty = phoneNumber;
+                        phoneNumber = string.Empty;
                     }
+
+                    // Chỉ giữ lại ký tự chữ số cho Số điện thoại
+                    var digitsOnly = new string(phoneNumber.Where(char.IsDigit).ToArray());
+                    if (digitsOnly.Length == 9)
+                    {
+                        digitsOnly = "0" + digitsOnly;
+                    }
+                    phoneNumber = PhoneRegex.IsMatch(digitsOnly) ? digitsOnly : GenerateDefaultPhoneNumber(studentId);
 
                     // Chuẩn hóa và kiểm tra khóa ngoại FacultyId
                     string? resolvedFacultyId = null;
@@ -189,6 +201,10 @@ namespace DemoMVC.Controllers
                         if (facultyById.TryGetValue(upperFac, out var matchedId))
                         {
                             resolvedFacultyId = matchedId;
+                        }
+                        else if (facultyByName.TryGetValue(rawFaculty, out var matchedByName))
+                        {
+                            resolvedFacultyId = matchedByName;
                         }
                         else
                         {
@@ -229,7 +245,7 @@ namespace DemoMVC.Controllers
                         {
                             StudentId = studentId,
                             FullName = fullName,
-                            PhoneNumber = string.IsNullOrWhiteSpace(phoneNumber) ? null : phoneNumber,
+                            PhoneNumber = phoneNumber,
                             FacultyId = resolvedFacultyId
                         };
                         _context.Student.Add(newStudent);
@@ -239,7 +255,7 @@ namespace DemoMVC.Controllers
                     else if (canUpdate)
                     {
                         existingStudent.FullName = fullName;
-                        existingStudent.PhoneNumber = string.IsNullOrWhiteSpace(phoneNumber) ? null : phoneNumber;
+                        existingStudent.PhoneNumber = phoneNumber;
                         existingStudent.FacultyId = resolvedFacultyId;
                         updatedCount++;
                     }
@@ -372,7 +388,7 @@ namespace DemoMVC.Controllers
             return workbook;
         }
 
-        private IQueryable<Student> BuildStudentQuery(string? searchString, string? facultyId, string? sortOrder)
+        private async Task<List<Student>> GetFilteredAndSortedStudentsAsync(string? searchString, string? facultyId, string? sortOrder)
         {
             var query = _context.Student
                 .Include(s => s.Faculty)
@@ -394,15 +410,37 @@ namespace DemoMVC.Controllers
                                       || (s.PhoneNumber != null && s.PhoneNumber.Contains(search)));
             }
 
+            var list = await query.ToListAsync();
+
             return sortOrder switch
             {
-                "name_desc" => query.OrderByDescending(s => s.FullName),
-                "faculty_asc" => query.OrderBy(s => s.Faculty != null ? s.Faculty.FacultyName : ""),
-                "faculty_desc" => query.OrderByDescending(s => s.Faculty != null ? s.Faculty.FacultyName : ""),
-                "id_desc" => query.OrderByDescending(s => s.StudentId),
-                "id_asc" => query.OrderBy(s => s.StudentId),
-                _ => query.OrderBy(s => s.FullName)
+                "name_desc" => list
+                    .OrderByDescending(s => GetGivenName(s.FullName), VietnameseComparer)
+                    .ThenByDescending(s => s.FullName ?? string.Empty, VietnameseComparer)
+                    .ToList(),
+                "faculty_asc" => list
+                    .OrderBy(s => s.Faculty?.FacultyName ?? string.Empty, VietnameseComparer)
+                    .ThenBy(s => GetGivenName(s.FullName), VietnameseComparer)
+                    .ToList(),
+                "faculty_desc" => list
+                    .OrderByDescending(s => s.Faculty?.FacultyName ?? string.Empty, VietnameseComparer)
+                    .ThenBy(s => GetGivenName(s.FullName), VietnameseComparer)
+                    .ToList(),
+                "id_desc" => list.OrderByDescending(s => s.StudentId, StringComparer.OrdinalIgnoreCase).ToList(),
+                "id_asc" => list.OrderBy(s => s.StudentId, StringComparer.OrdinalIgnoreCase).ToList(),
+                _ => list
+                    .OrderBy(s => GetGivenName(s.FullName), VietnameseComparer)
+                    .ThenBy(s => s.FullName ?? string.Empty, VietnameseComparer)
+                    .ToList()
             };
+        }
+
+        private static string GetGivenName(string? fullName)
+        {
+            if (string.IsNullOrWhiteSpace(fullName)) return string.Empty;
+            var trimmed = fullName.Trim();
+            int lastSpaceIndex = trimmed.LastIndexOf(' ');
+            return lastSpaceIndex >= 0 ? trimmed.Substring(lastSpaceIndex + 1) : trimmed;
         }
 
         // =======================================================
@@ -413,10 +451,11 @@ namespace DemoMVC.Controllers
         [Authorize(Roles = "Admin,GiangVien,SinhVien")]
         public async Task<IActionResult> Details(string? id)
         {
-            if (id == null) return NotFound();
+            if (string.IsNullOrWhiteSpace(id)) return NotFound();
 
             var student = await _context.Student
                 .Include(s => s.Faculty)
+                .AsNoTracking()
                 .FirstOrDefaultAsync(m => m.StudentId == id);
 
             if (student == null) return NotFound();
@@ -464,6 +503,16 @@ namespace DemoMVC.Controllers
         public async Task<IActionResult> Create([Bind("StudentId,FullName,FacultyId,PhoneNumber")] Student student)
         {
             student.StudentId = student.StudentId?.Trim();
+            student.FullName = student.FullName?.Trim();
+            student.PhoneNumber = new string((student.PhoneNumber ?? string.Empty).Where(char.IsDigit).ToArray());
+            if (string.IsNullOrEmpty(student.PhoneNumber))
+            {
+                ModelState.AddModelError(nameof(Student.PhoneNumber), "Vui lòng nhập Số điện thoại");
+            }
+            else if (!PhoneRegex.IsMatch(student.PhoneNumber))
+            {
+                ModelState.AddModelError(nameof(Student.PhoneNumber), "SĐT chỉ được nhập chữ số, bắt đầu bằng 0 và gồm 10-11 số");
+            }
 
             if (string.IsNullOrEmpty(student.StudentId))
             {
@@ -484,7 +533,7 @@ namespace DemoMVC.Controllers
             else
             {
                 // Tự nhập => xác định khoa theo mã ngành (01-09) trong mã sinh viên
-                string majorCode = "";
+                string majorCode;
                 if (student.StudentId.Length >= 4 && student.StudentId[2] == '0' && await _context.Faculty.AnyAsync(f => f.FacultyCode == student.StudentId.Substring(2, 2)))
                 {
                     // Dạng rút gọn [Năm 2 số][Ngành 2 số: 01-09]...
@@ -496,7 +545,7 @@ namespace DemoMVC.Controllers
                     majorCode = student.StudentId.Substring(4, 2);
                 }
 
-                var faculty = await _context.Faculty.FirstOrDefaultAsync(f => f.FacultyCode == majorCode);
+                var faculty = await _context.Faculty.AsNoTracking().FirstOrDefaultAsync(f => f.FacultyCode == majorCode);
                 if (faculty == null)
                 {
                     ModelState.AddModelError(nameof(Student.StudentId), $"Mã ngành '{majorCode}' không thuộc khoa nào trong hệ thống");
@@ -509,7 +558,7 @@ namespace DemoMVC.Controllers
             }
 
             // Kiểm tra trùng Mã sinh viên
-            if (!string.IsNullOrEmpty(student.StudentId) && StudentExists(student.StudentId))
+            if (!string.IsNullOrEmpty(student.StudentId) && await StudentExistsAsync(student.StudentId))
             {
                 ModelState.AddModelError(nameof(Student.StudentId), "Mã sinh viên đã tồn tại trong hệ thống");
             }
@@ -518,6 +567,7 @@ namespace DemoMVC.Controllers
             {
                 _context.Add(student);
                 await _context.SaveChangesAsync();
+                TempData["SuccessMessage"] = $"Đã thêm sinh viên '{student.FullName}' (Mã SV: {student.StudentId}) thành công.";
                 return RedirectToAction(nameof(Index));
             }
 
@@ -533,7 +583,7 @@ namespace DemoMVC.Controllers
         [Authorize(Roles = "Admin,GiangVien")]
         public async Task<IActionResult> Edit(string? id)
         {
-            if (id == null) return NotFound();
+            if (string.IsNullOrWhiteSpace(id)) return NotFound();
 
             var student = await _context.Student.FindAsync(id);
             if (student == null) return NotFound();
@@ -550,14 +600,32 @@ namespace DemoMVC.Controllers
         {
             if (id != student.StudentId) return NotFound();
 
+            student.FullName = student.FullName?.Trim();
+            student.PhoneNumber = new string((student.PhoneNumber ?? string.Empty).Where(char.IsDigit).ToArray());
+            if (string.IsNullOrEmpty(student.PhoneNumber))
+            {
+                ModelState.AddModelError(nameof(Student.PhoneNumber), "Vui lòng nhập Số điện thoại");
+            }
+            else if (!PhoneRegex.IsMatch(student.PhoneNumber))
+            {
+                ModelState.AddModelError(nameof(Student.PhoneNumber), "SĐT chỉ được nhập chữ số, bắt đầu bằng 0 và gồm 10-11 số");
+            }
+
             // Mã 10 số: khoa được chọn phải khớp với 2 số ngành trong mã
             if (StudentIdRegex.IsMatch(id) && !string.IsNullOrEmpty(student.FacultyId))
             {
-                var faculty = await _context.Faculty.FindAsync(student.FacultyId);
-                if (faculty != null && faculty.FacultyCode != id.Substring(4, 2))
+                var faculty = await _context.Faculty.AsNoTracking().FirstOrDefaultAsync(f => f.FacultyId == student.FacultyId);
+                if (faculty != null)
                 {
-                    ModelState.AddModelError(nameof(Student.FacultyId),
-                        $"Mã SV có mã ngành '{id.Substring(4, 2)}' nên không thể chuyển sang khoa {faculty.FacultyName}");
+                    string expectedCode = (id[2] == '0' && id.Substring(2, 2) == faculty.FacultyCode)
+                        ? id.Substring(2, 2)
+                        : id.Substring(4, 2);
+
+                    if (faculty.FacultyCode != expectedCode)
+                    {
+                        ModelState.AddModelError(nameof(Student.FacultyId),
+                            $"Mã SV có mã ngành '{expectedCode}' nên không thể chuyển sang khoa {faculty.FacultyName}");
+                    }
                 }
             }
 
@@ -567,10 +635,11 @@ namespace DemoMVC.Controllers
                 {
                     _context.Update(student);
                     await _context.SaveChangesAsync();
+                    TempData["SuccessMessage"] = $"Đã cập nhật thông tin sinh viên '{student.FullName}' (Mã SV: {student.StudentId}).";
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    if (!StudentExists(student.StudentId!)) return NotFound();
+                    if (!await StudentExistsAsync(student.StudentId!)) return NotFound();
                     else throw;
                 }
                 return RedirectToAction(nameof(Index));
@@ -588,10 +657,11 @@ namespace DemoMVC.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete(string? id)
         {
-            if (id == null) return NotFound();
+            if (string.IsNullOrWhiteSpace(id)) return NotFound();
 
             var student = await _context.Student
                 .Include(s => s.Faculty)
+                .AsNoTracking()
                 .FirstOrDefaultAsync(m => m.StudentId == id);
 
             if (student == null) return NotFound();
@@ -610,6 +680,7 @@ namespace DemoMVC.Controllers
             {
                 _context.Student.Remove(student);
                 await _context.SaveChangesAsync();
+                TempData["SuccessMessage"] = $"Đã xóa sinh viên '{student.FullName}' (Mã SV: {student.StudentId}) khỏi hệ thống.";
             }
             return RedirectToAction(nameof(Index));
         }
@@ -619,9 +690,51 @@ namespace DemoMVC.Controllers
         // =======================================================
 
         // Mã SV chuẩn: 10 chữ số = [Năm 2 số][Hệ 2 số][Ngành 2 số][STT 4 số]
-        private static readonly Regex StudentIdRegex = new(@"^\d{10}$");
+        private static readonly Regex StudentIdRegex = new(@"^\d{10}$", RegexOptions.Compiled);
+        private static readonly Regex PhoneRegex = new(@"^0\d{9,10}$", RegexOptions.Compiled);
+        private static readonly string[] DefaultPhonePrefixes = { "091", "094", "096", "097", "098", "032", "033", "034", "035", "036", "037", "038", "039", "086", "090", "093" };
         private const string DefaultYear = "21";   // Dùng khi khoa chưa có sinh viên nào
         private const string DefaultSystem = "21"; // Hệ Đại học chính quy
+
+        public static string GenerateDefaultPhoneNumber(string? seed)
+        {
+            int hash = Math.Abs((seed ?? "0").GetHashCode());
+            string prefix = DefaultPhonePrefixes[hash % DefaultPhonePrefixes.Length];
+            int tail = 1000000 + (hash % 9000000);
+            return $"{prefix}{tail:D7}";
+        }
+
+        public static async Task FixInvalidPhoneNumbersAsync(ApplicationDbContext context)
+        {
+            var students = await context.Student.ToListAsync();
+            bool hasChanges = false;
+
+            foreach (var s in students)
+            {
+                var raw = s.PhoneNumber?.Trim() ?? string.Empty;
+                var digits = new string(raw.Where(char.IsDigit).ToArray());
+                if (digits.Length == 9)
+                {
+                    digits = "0" + digits;
+                }
+
+                if (!PhoneRegex.IsMatch(digits))
+                {
+                    s.PhoneNumber = GenerateDefaultPhoneNumber(s.StudentId);
+                    hasChanges = true;
+                }
+                else if (s.PhoneNumber != digits)
+                {
+                    s.PhoneNumber = digits;
+                    hasChanges = true;
+                }
+            }
+
+            if (hasChanges)
+            {
+                await context.SaveChangesAsync();
+            }
+        }
 
         // Sinh mã tự động:
         // - Khoa đã có SV (VD: 2221050629) => giữ nguyên 6 số đầu "222105", STT + 1 => 2221050630
@@ -629,18 +742,19 @@ namespace DemoMVC.Controllers
         // - Khoa chưa có SV => 21 + 21 + [mã ngành] + 0001
         private async Task<string> GenerateStudentIdAsync(string facultyId)
         {
-            var faculty = await _context.Faculty.FindAsync(facultyId);
+            var faculty = await _context.Faculty.AsNoTracking().FirstOrDefaultAsync(f => f.FacultyId == facultyId);
             if (faculty == null) return string.Empty;
 
-            var ids = await _context.Student
-                .Where(s => s.FacultyId == facultyId && s.StudentId != null && s.StudentId.Length == 10)
+            var existingIds = (await _context.Student
+                .Where(s => s.StudentId != null && s.StudentId.Length == 10)
                 .Select(s => s.StudentId!)
-                .ToListAsync();
+                .ToListAsync())
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
             // Tìm mã sinh viên mới nhất của khoa (10 số, chứa đúng mã ngành của khoa)
-            var latest = ids
-                .Where(id => StudentIdRegex.IsMatch(id) && 
-                            (id.Substring(4, 2) == faculty.FacultyCode || 
+            var latest = existingIds
+                .Where(id => StudentIdRegex.IsMatch(id) &&
+                            (id.Substring(4, 2) == faculty.FacultyCode ||
                             (id[2] == '0' && id.Substring(2, 2) == faculty.FacultyCode)))
                 .OrderByDescending(id => id, StringComparer.Ordinal)
                 .FirstOrDefault();
@@ -654,7 +768,7 @@ namespace DemoMVC.Controllers
                     // Dạng rút gọn [Năm 2 số][Ngành 2 số][STT 6 số]
                     prefix = latest.Substring(0, 4);
                     next = int.Parse(latest.Substring(4)) + 1;
-                    while (next <= 999999 && StudentExists($"{prefix}{next:D6}")) next++;
+                    while (next <= 999999 && existingIds.Contains($"{prefix}{next:D6}")) next++;
                     return next > 999999 ? string.Empty : $"{prefix}{next:D6}";
                 }
                 else
@@ -671,23 +785,26 @@ namespace DemoMVC.Controllers
                 next = 1;
             }
 
-            while (next <= 9999 && StudentExists($"{prefix}{next:D4}")) next++;
+            while (next <= 9999 && existingIds.Contains($"{prefix}{next:D4}")) next++;
             return next > 9999 ? string.Empty : $"{prefix}{next:D4}";
         }
 
         // Đổ danh sách Khoa vào SelectList (hiển thị "05 · Công nghệ thông tin") và danh sách thô cho JavaScript
         private async Task PopulateFacultyDropDownListAsync(object? selectedFaculty = null)
         {
-            var faculties = await _context.Faculty.OrderBy(f => f.FacultyCode).ToListAsync();
+            var faculties = await _context.Faculty
+                .OrderBy(f => f.FacultyCode)
+                .AsNoTracking()
+                .ToListAsync();
             ViewBag.Faculties = faculties;
             ViewBag.FacultyList = new SelectList(
                 faculties.Select(f => new { f.FacultyId, Text = $"{f.FacultyCode} · {f.FacultyName}" }),
                 "FacultyId", "Text", selectedFaculty);
         }
 
-        private bool StudentExists(string id)
+        private Task<bool> StudentExistsAsync(string id)
         {
-            return _context.Student.Any(s => s.StudentId == id);
+            return _context.Student.AnyAsync(s => s.StudentId == id);
         }
     }
 }

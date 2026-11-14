@@ -73,6 +73,7 @@ using (var scope = app.Services.CreateScope())
     {
         dbContext.Database.Migrate();
         await SeedRolesAndUsersAsync(services);
+        await DemoMVC.Controllers.StudentController.FixInvalidPhoneNumbersAsync(dbContext);
 
         var sampleExcelPath = Path.Combine(Directory.GetCurrentDirectory(), "DanhSach_100_SinhVien_HUMG.xlsx");
         if (!File.Exists(sampleExcelPath))

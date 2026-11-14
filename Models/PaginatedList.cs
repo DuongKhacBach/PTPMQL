@@ -43,6 +43,24 @@ namespace DemoMVC.Models
 
             return new PaginatedList<T>(items, count, pageIndex, pageSize);
         }
+
+        public static PaginatedList<T> Create(IEnumerable<T> source, int pageIndex, int pageSize)
+        {
+            if (pageSize < 1) pageSize = 5;
+            var list = source as IList<T> ?? source.ToList();
+            var count = list.Count;
+            var totalPages = (int)Math.Ceiling(count / (double)pageSize);
+
+            if (pageIndex < 1) pageIndex = 1;
+            if (totalPages > 0 && pageIndex > totalPages) pageIndex = totalPages;
+
+            var items = list
+                .Skip((pageIndex - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            return new PaginatedList<T>(items, count, pageIndex, pageSize);
+        }
     }
 }
 

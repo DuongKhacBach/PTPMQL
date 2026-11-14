@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using DemoMVC.Data;
 using DemoMVC.Models;
 using DemoMVC.Models.ViewModels;
 
@@ -12,28 +13,41 @@ namespace DemoMVC.Controllers
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
+        private readonly ApplicationDbContext _context;
 
-        public AccountController(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager)
+        public AccountController(
+            UserManager<ApplicationUser> userManager,
+            RoleManager<IdentityRole> roleManager,
+            ApplicationDbContext context)
         {
             _userManager = userManager;
             _roleManager = roleManager;
+            _context = context;
         }
 
         // GET: /Account
+        [HttpGet]
         public async Task<IActionResult> Index()
         {
-            var users = await _userManager.Users.OrderBy(u => u.Email).ToListAsync();
-            var userWithRoles = new List<UserWithRoleVM>();
+            var users = await _userManager.Users
+                .AsNoTracking()
+                .OrderBy(u => u.Email)
+                .ToListAsync();
 
-            foreach (var user in users)
+            var roleLookup = await (from ur in _context.UserRoles.AsNoTracking()
+                                    join r in _context.Roles.AsNoTracking() on ur.RoleId equals r.Id
+                                    select new { ur.UserId, RoleName = r.Name! })
+                                   .ToListAsync();
+
+            var rolesByUserId = roleLookup
+                .GroupBy(x => x.UserId)
+                .ToDictionary(g => g.Key, g => (IList<string>)g.Select(x => x.RoleName).OrderBy(n => n).ToList());
+
+            var userWithRoles = users.Select(user => new UserWithRoleVM
             {
-                var roles = await _userManager.GetRolesAsync(user);
-                userWithRoles.Add(new UserWithRoleVM
-                {
-                    User = user,
-                    Roles = roles
-                });
-            }
+                User = user,
+                Roles = rolesByUserId.TryGetValue(user.Id, out var roles) ? roles : new List<string>()
+            }).ToList();
 
             return View(userWithRoles);
         }
@@ -49,6 +63,7 @@ namespace DemoMVC.Controllers
 
             var userRoles = await _userManager.GetRolesAsync(user);
             var allRoles = await _roleManager.Roles
+                .AsNoTracking()
                 .OrderBy(r => r.Name)
                 .Select(r => new RoleVM { Id = r.Id, Name = r.Name! })
                 .ToListAsync();

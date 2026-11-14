@@ -16,9 +16,13 @@ namespace DemoMVC.Controllers
         }
 
         // GET: /Role
+        [HttpGet]
         public async Task<IActionResult> Index()
         {
-            var roles = await _roleManager.Roles.OrderBy(r => r.Name).ToListAsync();
+            var roles = await _roleManager.Roles
+                .AsNoTracking()
+                .OrderBy(r => r.Name)
+                .ToListAsync();
             return View(roles);
         }
 
@@ -87,7 +91,15 @@ namespace DemoMVC.Controllers
                 return View(role);
             }
 
-            role.Name = roleName.Trim();
+            roleName = roleName.Trim();
+            var existingRole = await _roleManager.FindByNameAsync(roleName);
+            if (existingRole != null && existingRole.Id != role.Id)
+            {
+                ModelState.AddModelError(string.Empty, $"Role '{roleName}' đã tồn tại trong hệ thống.");
+                return View(role);
+            }
+
+            role.Name = roleName;
             var result = await _roleManager.UpdateAsync(role);
             if (result.Succeeded)
             {
@@ -136,4 +148,3 @@ namespace DemoMVC.Controllers
         }
     }
 }
-

@@ -280,10 +280,10 @@
   + Tích hợp phân trang kết hợp Tìm kiếm, Sắp xếp và Chọn số dòng/trang (`pageSize`: 5, 10, 20, 50) trên `StudentController` và `FacultyController`.
   + Cập nhật giao diện Bootstrap 5 Pagination trên `Views/Student/Index.cshtml` và `Views/Faculty/Index.cshtml` (hỗ trợ nút Trang đầu, Trước, các số trang, Sau, Trang cuối và hiển thị thông tin tổng số bản ghi).
 
-Mẹo hữu ích cho sau này: Khi gặp lỗi The process cannot access the file ... DemoMVC.exe because it is being used by another process,chỉ cần chạy 1 dòng lệnh PowerShell này trước khi chạy lại dotnet watch:
+Mẹo hữu ích cho sau này: Khi gặp lỗi "The process cannot access the file ... DemoMVC.exe because it is being used by another process" hoặc lỗi trùng cổng (address already in use) do có tiến trình `dotnet watch` cũ đang chạy ngầm, chỉ cần chạy dòng lệnh PowerShell này trước khi chạy lại `dotnet watch`:
 
 powershell :
-Stop-Process -Name "DemoMVC" - Force -ErrorAction SilentlyContinue 
+Stop-Process -Name "DemoMVC","dotnet" -Force -ErrorAction SilentlyContinue 
 
 --------------------------------------------------------------------------------
 
@@ -345,8 +345,28 @@ Stop-Process -Name "DemoMVC" - Force -ErrorAction SilentlyContinue
     - UserManager<TUser>: Dịch vụ quản lý vòng đời người dùng (tạo user, băm mật khẩu, kiểm tra/gán/gỡ Role).
     - SignInManager<TUser>: Dịch vụ xử lý đăng nhập (PasswordSignInAsync), đăng xuất (SignOutAsync) và phát hành Cookie xác thực.
     - RoleManager<TRole>: Dịch vụ quản lý tạo, sửa, xóa và kiểm tra sự tồn tại của các Role.
-  * ClosedXML (Xuất file Excel):
+  * ClosedXML (Xuất & Nhập file Excel):
     - Thư viện .NET mã nguồn mở xây dựng trên OpenXML giúp tạo, đọc và định dạng bảng tính Excel (.xlsx) trực tiếp trên bộ nhớ (MemoryStream) mà không cần cài đặt Microsoft Excel trên máy chủ.
+
+--------------------------------------------------------------------------------
+
+[CẬP NHẬT TỐI ƯU HỆ THỐNG, NHẬP EXCEL & CHUẨN HÓA NGHIỆP VỤ]
+- Ngày cập nhật: 14/11/2026
+- Nội dung tóm tắt:
+  + Bổ sung chức năng Nhập danh sách Sinh viên từ file Excel (ImportExcel) và Tải file mẫu 100 Sinh viên HUMG (DownloadSampleExcel):
+    * Hỗ trợ đọc linh hoạt cả cấu trúc 6 cột (STT | Mã SV | Họ tên | SĐT | Mã Khoa | Tên Khoa) và 4 cột (Mã SV | Họ tên | SĐT | Mã Khoa).
+    * Tự động chống trùng khóa chính StudentId (thêm mới nếu chưa có, cập nhật thông tin nếu đã tồn tại đối với Admin/GiangVien).
+  + Khắc phục triệt để lỗi lệch cột Số điện thoại & Khóa điều kiện chỉ nhập số vào ô SĐT:
+    * Tự động kiểm tra và chuẩn hóa toàn bộ SĐT bị lệch trong CSDL (FixInvalidPhoneNumbersAsync khi khởi động và khi Import Excel).
+    * Khóa ô input SĐT trên giao diện (Create.cshtml & Edit.cshtml) bằng `oninput="this.value = this.value.replace(/\D/g, '')"` chỉ cho phép gõ chữ số (0-9), tối đa 11 số.
+    * Ràng buộc chặt chẽ cả phía Client & Server (`[Required]`, `[RegularExpression(@"^0\d{9,10}$")]`).
+  + Chuẩn hóa thuật toán Sắp xếp Họ và tên từ A-Z / Z-A theo Tên chính tiếng Việt:
+    * Tách từ cuối cùng trong Họ và tên (`GetGivenName`) làm khóa sắp xếp chính kèm bộ so sánh chuẩn tiếng Việt `CultureInfo("vi-VN")`.
+    * Ví dụ: "Bùi Minh Anh" (tên Anh - vần A) xếp trên "An Hoàn Dương" (tên Dương - vần D); nếu trùng tên chính thì xét tiếp theo Họ và tên đệm.
+  + Làm sạch mã nguồn, tối ưu truy vấn EF Core & Giao diện Bootstrap 5:
+    * Dọn dẹp các tệp tạm (`publish/`, `publish.zip`, `App.db.bak`) và cập nhật `.gitignore`.
+    * Loại bỏ truy vấn N+1 trong `AccountController.Index` bằng LINQ Join một lần duy nhất với `AsNoTracking()`.
+    * Đồng bộ trạng thái active trên thanh menu `_Layout.cshtml`, biểu tượng cột đang sắp xếp và thông báo đóng/mở (`alert-dismissible`) trên toàn bộ các View.
 
 --------------------------------------------------------------------------------
 

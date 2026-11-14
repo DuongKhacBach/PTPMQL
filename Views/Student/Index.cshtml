@@ -7,6 +7,19 @@
     var currentSort = ViewData["CurrentSort"] as string;
     var currentPageSize = ViewData["CurrentPageSize"] is int ps ? ps : (Model?.PageSize ?? 5);
     int[] pageSizeOptions = new[] { 5, 10, 20, 50 };
+
+    string GetSortIcon(string column)
+    {
+        return column switch
+        {
+            "id" => currentSort == "id_asc" ? "bi-sort-numeric-down text-primary" :
+                    currentSort == "id_desc" ? "bi-sort-numeric-up-alt text-primary" : "bi-arrow-down-up text-secondary opacity-50",
+            "faculty" => currentSort == "faculty_asc" ? "bi-sort-alpha-down text-primary" :
+                         currentSort == "faculty_desc" ? "bi-sort-alpha-up-alt text-primary" : "bi-arrow-down-up text-secondary opacity-50",
+            _ => string.IsNullOrEmpty(currentSort) ? "bi-sort-alpha-down text-primary" :
+                 currentSort == "name_desc" ? "bi-sort-alpha-up-alt text-primary" : "bi-arrow-down-up text-secondary opacity-50"
+        };
+    }
 }
 
 @if (TempData["SuccessMessage"] != null)
@@ -119,23 +132,23 @@
             <table class="table table-sm table-hover align-middle mb-0">
                 <thead class="table-light text-muted small text-uppercase">
                     <tr>
-                        <th class="ps-3 py-2.5" style="width: 170px;">
+                        <th class="ps-3 py-2" style="width: 170px;">
                             <a asp-action="Index" asp-route-sortOrder="@ViewData["IdSortParm"]" asp-route-searchString="@currentFilter" asp-route-facultyId="@currentFaculty" asp-route-pageSize="@currentPageSize" class="text-decoration-none text-muted d-inline-flex align-items-center gap-1">
-                                Mã SV <i class="bi bi-arrow-down-up text-secondary small"></i>
+                                Mã SV <i class="bi @GetSortIcon("id") small"></i>
                             </a>
                         </th>
-                        <th class="py-2.5">
+                        <th class="py-2">
                             <a asp-action="Index" asp-route-sortOrder="@ViewData["NameSortParm"]" asp-route-searchString="@currentFilter" asp-route-facultyId="@currentFaculty" asp-route-pageSize="@currentPageSize" class="text-decoration-none text-muted d-inline-flex align-items-center gap-1">
-                                Họ và tên <i class="bi bi-arrow-down-up text-secondary small"></i>
+                                Họ và tên <i class="bi @GetSortIcon("name") small"></i>
                             </a>
                         </th>
-                        <th class="py-2.5">
+                        <th class="py-2">
                             <a asp-action="Index" asp-route-sortOrder="@ViewData["FacultySortParm"]" asp-route-searchString="@currentFilter" asp-route-facultyId="@currentFaculty" asp-route-pageSize="@currentPageSize" class="text-decoration-none text-muted d-inline-flex align-items-center gap-1">
-                                Khoa (HUMG) <i class="bi bi-arrow-down-up text-secondary small"></i>
+                                Khoa (HUMG) <i class="bi @GetSortIcon("faculty") small"></i>
                             </a>
                         </th>
-                        <th class="py-2.5">Số điện thoại</th>
-                        <th class="text-end pe-3 py-2.5" style="width: 150px;">Thao tác</th>
+                        <th class="py-2">Số điện thoại</th>
+                        <th class="text-end pe-3 py-2" style="width: 150px;">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody class="border-top-0">
@@ -326,7 +339,6 @@
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow">
                 <form asp-controller="Student" asp-action="ImportExcel" method="post" enctype="multipart/form-data">
-                    @Html.AntiForgeryToken()
                     <div class="modal-header bg-success text-white">
                         <h5 class="modal-title fw-bold" id="importExcelModalLabel">
                             <i class="bi bi-file-earmark-arrow-up me-2"></i>Nhập danh sách Sinh viên từ Excel

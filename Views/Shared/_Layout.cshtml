@@ -1,3 +1,7 @@
+@{
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? string.Empty;
+    var currentAction = ViewContext.RouteData.Values["action"]?.ToString() ?? string.Empty;
+}
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -34,42 +38,42 @@
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="navbarContent">
-                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0 gap-1">
                         <li class="nav-item">
-                            <a class="nav-link" asp-controller="Home" asp-action="Index">
+                            <a class="nav-link @(currentController == "Home" && currentAction == "Index" ? "active" : "")" asp-controller="Home" asp-action="Index">
                                 <i class="bi bi-house-door"></i> Trang chủ
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link fw-semibold text-primary" asp-controller="Student" asp-action="Index">
+                            <a class="nav-link @(currentController == "Student" ? "active" : "")" asp-controller="Student" asp-action="Index">
                                 <i class="bi bi-people-fill"></i> Quản lý Sinh viên
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" asp-controller="Faculty" asp-action="Index">
+                            <a class="nav-link @(currentController == "Faculty" ? "active" : "")" asp-controller="Faculty" asp-action="Index">
                                 <i class="bi bi-building"></i> Quản lý Khoa
                             </a>
                         </li>
                         @if (User.IsInRole("Admin"))
                         {
                             <li class="nav-item">
-                                <a class="nav-link text-danger fw-semibold" asp-controller="Account" asp-action="Index">
-                                    <i class="bi bi-person-gear"></i> Quản lý Tài khoản
+                                <a class="nav-link @(currentController == "Account" ? "active" : "")" asp-controller="Account" asp-action="Index">
+                                    <i class="bi bi-person-gear text-danger"></i> Quản lý Tài khoản
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link text-danger fw-semibold" asp-controller="Role" asp-action="Index">
-                                    <i class="bi bi-shield-lock"></i> Quản lý Role
+                                <a class="nav-link @(currentController == "Role" ? "active" : "")" asp-controller="Role" asp-action="Index">
+                                    <i class="bi bi-shield-lock text-danger"></i> Quản lý Role
                                 </a>
                             </li>
                         }
                         <li class="nav-item">
-                            <a class="nav-link" asp-controller="Demo" asp-action="Index">
+                            <a class="nav-link @(currentController == "Demo" ? "active" : "")" asp-controller="Demo" asp-action="Index">
                                 <i class="bi bi-layers"></i> Demo
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" asp-controller="Home" asp-action="Privacy">
+                            <a class="nav-link @(currentController == "Home" && currentAction == "Privacy" ? "active" : "")" asp-controller="Home" asp-action="Privacy">
                                 <i class="bi bi-shield-check"></i> Privacy
                             </a>
                         </li>

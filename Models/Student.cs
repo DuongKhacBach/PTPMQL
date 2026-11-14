@@ -27,7 +27,9 @@ namespace DemoMVC.Models
         // ----------------------------------------
 
         [Display(Name = "Số điện thoại (SĐT)")]
-        [RegularExpression(@"^0\d{9,10}$", ErrorMessage = "SĐT phải bắt đầu bằng 0 và gồm 10-11 chữ số")]
+        [Required(ErrorMessage = "Vui lòng nhập Số điện thoại")]
+        [RegularExpression(@"^0\d{9,10}$", ErrorMessage = "SĐT chỉ được nhập chữ số, bắt đầu bằng 0 và gồm 10-11 số")]
+        [StringLength(11, MinimumLength = 10, ErrorMessage = "Số điện thoại phải từ 10 đến 11 chữ số")]
         public string? PhoneNumber { get; set; }
     }
 }

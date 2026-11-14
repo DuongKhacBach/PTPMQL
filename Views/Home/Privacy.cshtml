@@ -1,6 +1,35 @@
-﻿@{
-    ViewData["Title"] = "Privacy Policy";
+@{
+    ViewData["Title"] = "Chính sách bảo mật";
 }
-<h1>@ViewData["Title"]</h1>
 
-<p>Use this page to detail your site's privacy policy.</p>
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm border-0 rounded-3">
+            <div class="card-header bg-white py-3 border-bottom d-flex align-items-center gap-3">
+                <div class="bg-primary-subtle text-primary rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;">
+                    <i class="bi bi-shield-check fs-5"></i>
+                </div>
+                <div>
+                    <h5 class="fw-bold text-dark mb-0">@ViewData["Title"]</h5>
+                    <small class="text-muted">Bảo mật dữ liệu & phân quyền truy cập trên hệ thống DemoMVC</small>
+                </div>
+            </div>
+            <div class="card-body p-4">
+                <p class="text-muted mb-3">
+                    Hệ thống <strong>DemoMVC</strong> áp dụng cơ chế xác thực và phân quyền của <strong>ASP.NET Core Identity</strong> nhằm bảo vệ thông tin sinh viên, khoa đào tạo và tài khoản người dùng:
+                </p>
+                <ul class="list-group list-group-flush border rounded-2 mb-0 small">
+                    <li class="list-group-item py-2">
+                        <i class="bi bi-lock-fill text-primary me-2"></i><strong>Xác thực mật khẩu & Khóa tài khoản:</strong> Mật khẩu được mã hóa một chiều (PBKDF2) và tự động khóa tạm thời 5 phút nếu đăng nhập sai quá 5 lần.
+                    </li>
+                    <li class="list-group-item py-2">
+                        <i class="bi bi-person-badge-fill text-success me-2"></i><strong>Phân quyền theo vai trò (Role-based Authorization):</strong> Phân tách quyền hạn rõ ràng giữa <code>Admin</code>, <code>GiangVien</code> và <code>SinhVien</code>.
+                    </li>
+                    <li class="list-group-item py-2">
+                        <i class="bi bi-shield-shaded text-info me-2"></i><strong>Bảo vệ chống giả mạo (CSRF):</strong> Tất cả biểu mẫu cập nhật dữ liệu đều tích hợp Anti-Forgery Token.
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>

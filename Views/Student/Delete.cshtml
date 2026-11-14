@@ -23,19 +23,19 @@
                 </div>
 
                 <div class="list-group list-group-flush border rounded-2 mb-0">
-                    <div class="list-group-item d-flex justify-content-between align-items-center py-2.5">
+                    <div class="list-group-item d-flex justify-content-between align-items-center py-2">
                         <span class="text-muted small fw-semibold">Mã sinh viên (ID):</span>
                         <span class="fw-bold text-primary font-monospace">@Model.StudentId</span>
                     </div>
-                    <div class="list-group-item d-flex justify-content-between align-items-center py-2.5">
+                    <div class="list-group-item d-flex justify-content-between align-items-center py-2">
                         <span class="text-muted small fw-semibold">Họ và tên:</span>
                         <span class="fw-bold text-dark">@Model.FullName</span>
                     </div>
-                    <div class="list-group-item d-flex justify-content-between align-items-center py-2.5">
+                    <div class="list-group-item d-flex justify-content-between align-items-center py-2">
                         <span class="text-muted small fw-semibold">Khoa:</span>
                         <span>@(Model.Faculty != null ? Model.Faculty.FacultyName : "Chưa phân khoa")</span>
                     </div>
-                    <div class="list-group-item d-flex justify-content-between align-items-center py-2.5">
+                    <div class="list-group-item d-flex justify-content-between align-items-center py-2">
                         <span class="text-muted small fw-semibold">Số điện thoại:</span>
                         <span class="text-secondary">@(string.IsNullOrEmpty(Model.PhoneNumber) ? "Chưa có" : Model.PhoneNumber)</span>
                     </div>
