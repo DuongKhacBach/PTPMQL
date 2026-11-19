@@ -370,6 +370,32 @@ Stop-Process -Name "DemoMVC","dotnet" -Force -ErrorAction SilentlyContinue
 
 --------------------------------------------------------------------------------
 
+[TUẦN 12 — HOÀN THIỆN STT 11, 12, 13, 14, 15 & TỐI ƯU HỆ THỐNG]
+- Ngày cập nhật: 19/11/2026
+- Nội dung tóm tắt:
+  + STT 13 (Xác thực Email & Quên mật khẩu với MailKit):
+    * Cài đặt gói NuGet MailKit (5.0.0), tạo MailSettings và SendMailService (triển khai IEmailSender qua SMTP StartTLS, có fallback lưu file .eml vào thư mục mailsSave/ khi chưa cấu hình App Password).
+    * Bật RequireConfirmedAccount = true và RequireConfirmedEmail = true trong Program.cs (giữ EmailConfirmed = true cho 3 tài khoản Seed).
+    * Tạo đầy đủ 8 cặp Razor Pages Identity tiếng Việt (Bootstrap 5): RegisterConfirmation, ConfirmEmail, ResendEmailConfirmation, ForgotPassword, ForgotPasswordConfirmation, ResetPassword, ResetPasswordConfirmation, Lockout.
+    * Cập nhật Register.cshtml.cs tự động gán Role mặc định SinhVien và gửi email xác nhận; bổ sung liên kết Quên mật khẩu & Gửi lại email xác nhận trên Login.cshtml.
+  + STT 14 (Phân quyền động theo từng Action của tất cả Controller):
+    * Tạo Models/Process/SystemPermissions.cs định nghĩa đầy đủ 21 Permission Claims theo nhóm Controller (Student, Faculty, Role, Account) và đăng ký Policy động trong Program.cs.
+    * Tự động seed RoleClaims mặc định vào AspNetRoleClaims cho Admin (21 quyền), GiangVien (9 quyền), SinhVien (4 quyền).
+    * Bổ sung RoleController.AssignClaim (GET/POST) gom nhóm theo Controller có nút Chọn/Bỏ chọn tất cả; thay toàn bộ [Authorize(Roles = ...)] và User.IsInRole(...) bằng Policy động và IAuthorizationService.
+  + STT 11 (Toàn bộ CRUD bằng Bootstrap 5 Modal + AJAX):
+    * Xây dựng khung #crudModal, hệ thống thông báo Toast và engine wwwroot/js/crud-modal.js dùng chung cho cả 4 module Student, Faculty, Role, Account (giữ Modal khi lỗi ModelState, parse lại jQuery Unobtrusive Validation, tự động nạp lại đúng bảng dữ liệu giữ nguyên trang/bộ lọc/từ khóa/sắp xếp).
+  + STT 12 (Phân trang & Tìm kiếm cho tất cả các trang):
+    * Áp dụng PaginatedList<T>, tìm kiếm, chọn số dòng/trang (pageSize) và tải lại bảng bằng AJAX cho cả 4 trang: Student, Faculty, Role (kèm số Claims và số User) và Account (kèm lọc theo Role, không N+1).
+  + STT 15 (Nhập/Xuất Excel cho toàn bộ bảng nghiệp vụ kèm xác nhận Ghi đè / Ghi bổ sung):
+    * Nâng cấp ImportExcel cho StudentController và bổ sung mới ImportExcel + DownloadSampleExcel + ExportExcel cho FacultyController.
+    * Triển khai quy trình 2 bước AJAX: Bước 1 kiểm tra/xem trước thống kê (tổng dòng, hợp lệ, thêm mới, trùng mã kèm 10 mã minh họa, dòng lỗi); Bước 2 bắt buộc chọn Radio 'append' (chỉ ghi bổ sung) hoặc 'overwrite' (ghi đè dữ liệu trùng & thêm mới).
+  + Tối ưu hệ thống, Bảo mật & Dọn dẹp:
+    * Xóa DemoController/Views/Demo thừa, dọn mục Demo & Privacy khỏi Navbar, ẩn menu quản lý khi chưa đăng nhập, đặt route mặc định / về Home/Index.
+    * Ẩn khối tài khoản mẫu trên Login.cshtml ở môi trường Production (chỉ hiển thị khi Env.IsDevelopment()); cấu hình Cookie SameSite=Lax, SecurePolicy=SameAsRequest; thay Console.WriteLine bằng ILogger.
+    * Tạo migration Update_Student_PhoneNumber_Constraints đồng bộ sạch CSDL, xóa 6 bản ghi sinh viên test rác (giữ chuẩn 100 SV + 9 Khoa HUMG) và gỡ thư mục keys/ khỏi Git tracking.
+
+--------------------------------------------------------------------------------
+
 [MẸO ĐẨY CODE LÊN GITHUB NHANH]
 1. Dùng lệnh `git up` (Nhanh và tiện nhất - áp dụng cho mọi dự án trên máy):
    - Đẩy nhanh (mặc định ghi chú là "Update code"):

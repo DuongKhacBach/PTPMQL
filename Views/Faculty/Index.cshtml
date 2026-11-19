@@ -8,6 +8,7 @@
     int[] pageSizeOptions = new[] { 5, 10, 20, 50 };
 
     bool canCreate = (await AuthorizationService.AuthorizeAsync(User, SystemPermissions.Faculty.Create)).Succeeded;
+    bool canExport = (await AuthorizationService.AuthorizeAsync(User, SystemPermissions.Faculty.ExportExcel)).Succeeded;
     bool canImport = (await AuthorizationService.AuthorizeAsync(User, SystemPermissions.Faculty.ImportExcel)).Succeeded;
     bool canViewStudents = (await AuthorizationService.AuthorizeAsync(User, SystemPermissions.Student.Index)).Succeeded;
 }
@@ -56,6 +57,16 @@
                             data-modal-size="modal-lg">
                         <i class="bi bi-upload me-1"></i> Nhập Excel
                     </button>
+                }
+                @if (canExport)
+                {
+                    <a id="btnExportExcel"
+                       data-export-base-url="@Url.Action("ExportExcel", "Faculty")"
+                       asp-action="ExportExcel"
+                       asp-route-searchString="@currentFilter"
+                       class="btn btn-success btn-sm px-3 rounded-2">
+                        <i class="bi bi-file-earmark-excel me-1"></i> Xuất Excel
+                    </a>
                 }
                 @if (canViewStudents)
                 {

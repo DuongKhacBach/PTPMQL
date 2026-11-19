@@ -142,10 +142,10 @@ app.MapControllerRoute(
     pattern: "Index",
     defaults: new { controller = "Student", action = "Index" });
 
-// 3. Route mặc định: / hoặc /{controller}/{action}/{id?}
+// 3. Route mặc định: / về Trang chủ (Home/Index) hoặc /{controller}/{action}/{id?}
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Student}/{action=Index}/{id?}");
+    pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.MapRazorPages();
 

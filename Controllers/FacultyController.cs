@@ -267,6 +267,72 @@ namespace DemoMVC.Controllers
         }
 
         // =======================================================
+        // EXPORT EXCEL KHOA
+        // =======================================================
+        [HttpGet]
+        [Authorize(Policy = SystemPermissions.Faculty.ExportExcel)]
+        public async Task<IActionResult> ExportExcel(string? searchString)
+        {
+            var query = _context.Faculty
+                .Include(f => f.Students)
+                .AsNoTracking()
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(searchString))
+            {
+                var keyword = searchString.Trim();
+                query = query.Where(f => f.FacultyId.Contains(keyword)
+                                      || f.FacultyCode.Contains(keyword)
+                                      || f.FacultyName.Contains(keyword));
+            }
+
+            var faculties = await query.OrderBy(f => f.FacultyCode).ToListAsync();
+
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.Worksheets.Add("DanhSachKhoa");
+
+            var headers = new[] { "STT", "Mã Khoa", "Mã số ngành (2 số)", "Tên Khoa", "Số lượng Sinh viên" };
+            for (int col = 0; col < headers.Length; col++)
+            {
+                worksheet.Cell(1, col + 1).Value = headers[col];
+            }
+
+            var headerRange = worksheet.Range(1, 1, 1, headers.Length);
+            headerRange.Style.Font.Bold = true;
+            headerRange.Style.Fill.BackgroundColor = XLColor.LightSteelBlue;
+            headerRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+            for (int i = 0; i < faculties.Count; i++)
+            {
+                var f = faculties[i];
+                int row = i + 2;
+                worksheet.Cell(row, 1).Value = i + 1;
+                worksheet.Cell(row, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                worksheet.Cell(row, 2).Style.NumberFormat.Format = "@";
+                worksheet.Cell(row, 2).SetValue(f.FacultyId);
+                worksheet.Cell(row, 3).Style.NumberFormat.Format = "@";
+                worksheet.Cell(row, 3).SetValue(f.FacultyCode);
+                worksheet.Cell(row, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                worksheet.Cell(row, 4).SetValue(f.FacultyName);
+                worksheet.Cell(row, 5).Value = f.Students?.Count ?? 0;
+                worksheet.Cell(row, 5).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            }
+
+            int lastRow = Math.Max(1, faculties.Count + 1);
+            var tableRange = worksheet.Range(1, 1, lastRow, headers.Length);
+            tableRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            tableRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+            worksheet.Columns().AdjustToContents();
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            return File(
+                stream.ToArray(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                $"DanhSachKhoa_{DateTime.Now:yyyyMMdd_HHmm}.xlsx");
+        }
+
+        // =======================================================
         // IMPORT EXCEL KHOA (STT 15) + DOWNLOAD FILE MẪU
         // =======================================================
         [HttpGet]

@@ -28,6 +28,7 @@ namespace DemoMVC.Models.Process
             public const string Create = "Faculty.Create";
             public const string Edit = "Faculty.Edit";
             public const string Delete = "Faculty.Delete";
+            public const string ExportExcel = "Faculty.ExportExcel";
             public const string ImportExcel = "Faculty.ImportExcel";
         }
 
@@ -63,6 +64,7 @@ namespace DemoMVC.Models.Process
             new(Faculty.Create, "Quản lý Khoa", "Thêm mới Khoa", "Tạo mới Khoa đào tạo và mã ngành 2 chữ số"),
             new(Faculty.Edit, "Quản lý Khoa", "Chỉnh sửa Khoa", "Cập nhật tên Khoa và mã số ngành"),
             new(Faculty.Delete, "Quản lý Khoa", "Xóa Khoa", "Xóa Khoa không có sinh viên trực thuộc"),
+            new(Faculty.ExportExcel, "Quản lý Khoa", "Xuất Excel Khoa", "Xuất danh sách Khoa và thống kê số lượng sinh viên ra tệp Excel (.xlsx)"),
             new(Faculty.ImportExcel, "Quản lý Khoa", "Nhập Excel Khoa", "Tải tệp mẫu và nhập danh sách Khoa từ tệp Excel (.xlsx)"),
 
             // Quản lý Role
@@ -93,7 +95,8 @@ namespace DemoMVC.Models.Process
                     Student.ExportExcel,
                     Student.ImportExcel,
                     Faculty.Index,
-                    Faculty.Details
+                    Faculty.Details,
+                    Faculty.ExportExcel
                 },
                 "SinhVien" => new List<string>
                 {
