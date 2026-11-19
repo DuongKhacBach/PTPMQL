@@ -1,0 +1,46 @@
+@page
+@model RegisterConfirmationModel
+@inject Microsoft.AspNetCore.Hosting.IWebHostEnvironment Env
+
+@{
+    ViewData["Title"] = "Xác nhận đăng ký tài khoản";
+}
+
+<div class="row justify-content-center mt-4">
+    <div class="col-md-7 col-lg-6">
+        <div class="card shadow-sm border-0 rounded-3">
+            <div class="card-header bg-white py-3 border-bottom text-center">
+                <div class="bg-success text-white rounded-circle p-2 d-inline-flex align-items-center justify-content-center mb-2" style="width: 48px; height: 48px;">
+                    <i class="bi bi-envelope-check-fill fs-4"></i>
+                </div>
+                <h5 class="fw-bold text-dark mb-0">@ViewData["Title"]</h5>
+            </div>
+            <div class="card-body p-4 text-center">
+                <p class="mb-3">
+                    Hệ thống đã gửi một email chứa liên kết xác nhận đến địa chỉ
+                    <strong class="text-primary">@Model.Email</strong>.
+                </p>
+                <p class="text-muted small mb-4">
+                    Vui lòng kiểm tra hộp thư đến (hoặc thư mục Spam / Thư rác) và nhấp vào liên kết trong email để kích hoạt tài khoản trước khi đăng nhập.
+                </p>
+
+                @if (Env.IsDevelopment())
+                {
+                    <div class="alert alert-info text-start small mb-4" role="alert">
+                        <i class="bi bi-info-circle-fill me-1"></i>
+                        <strong>Lưu ý môi trường Development:</strong> Nếu chưa cấu hình Gmail &amp; App Password thật trong <code>appsettings.json</code>, hệ thống sẽ tự động lưu nội dung email dưới dạng tệp <code>.eml</code> trong thư mục <code>mailsSave/</code> của dự án để bạn kiểm tra liên kết xác nhận.
+                    </div>
+                }
+
+                <div class="d-flex justify-content-center flex-wrap gap-2">
+                    <a asp-page="./Login" class="btn btn-primary btn-sm px-4">
+                        <i class="bi bi-box-arrow-in-right me-1"></i> Đến trang Đăng nhập
+                    </a>
+                    <a asp-page="./ResendEmailConfirmation" class="btn btn-outline-secondary btn-sm px-3">
+                        <i class="bi bi-envelope-arrow-up me-1"></i> Gửi lại email xác nhận
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

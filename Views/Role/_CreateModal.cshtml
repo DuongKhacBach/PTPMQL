@@ -1,0 +1,30 @@
+@{
+    var roleNameVal = ViewData["RoleName"] as string ?? string.Empty;
+}
+
+<div class="modal-header bg-primary text-white">
+    <h5 class="modal-title fw-bold" id="crudModalLabel">
+        <i class="bi bi-plus-circle me-2"></i>Thêm Role mới
+    </h5>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Đóng"></button>
+</div>
+
+<form asp-controller="Role" asp-action="Create" method="post" data-ajax-form="true" autocomplete="off">
+    <div class="modal-body p-4">
+        <div asp-validation-summary="All" class="text-danger small mb-3"></div>
+        <div class="alert alert-danger py-2 small d-none" data-modal-error role="alert"></div>
+
+        <div class="mb-2">
+            <label for="roleName" class="form-label fw-semibold small">Tên Role <span class="text-danger">*</span></label>
+            <input type="text" id="roleName" name="roleName" value="@roleNameVal" class="form-control" placeholder="VD: TruongKhoa, GiaoVu, QuanTri..." required />
+            <div class="form-text small">Sau khi tạo Role, bạn có thể bấm nút <strong>Phân quyền</strong> để gán quyền chi tiết theo từng Action.</div>
+        </div>
+    </div>
+
+    <div class="modal-footer bg-light">
+        <button type="button" class="btn btn-outline-secondary btn-sm px-3" data-bs-dismiss="modal">Hủy</button>
+        <button type="submit" class="btn btn-primary btn-sm px-4">
+            <i class="bi bi-check-lg me-1"></i> Lưu Role
+        </button>
+    </div>
+</form>

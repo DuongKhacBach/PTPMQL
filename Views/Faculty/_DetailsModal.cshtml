@@ -1,0 +1,49 @@
+@model DemoMVC.Models.Faculty
+@inject IAuthorizationService AuthorizationService
+@{
+    bool canEdit = (await AuthorizationService.AuthorizeAsync(User, SystemPermissions.Faculty.Edit)).Succeeded;
+}
+
+<div class="modal-header bg-info text-white">
+    <h5 class="modal-title fw-bold" id="crudModalLabel">
+        <i class="bi bi-building me-2"></i>Thông tin Chi tiết Khoa
+    </h5>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Đóng"></button>
+</div>
+
+<div class="modal-body p-4">
+    <div class="list-group list-group-flush border rounded-2">
+        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+            <span class="text-muted small fw-semibold"><i class="bi bi-hash me-2 text-primary"></i>Mã Khoa:</span>
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 font-monospace">
+                @Model.FacultyId
+            </span>
+        </div>
+        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+            <span class="text-muted small fw-semibold"><i class="bi bi-123 me-2 text-secondary"></i>Mã số ngành (2 số):</span>
+            <span class="badge bg-dark-subtle text-dark border px-2 py-1 font-monospace">@Model.FacultyCode</span>
+        </div>
+        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+            <span class="text-muted small fw-semibold"><i class="bi bi-building me-2 text-secondary"></i>Tên Khoa:</span>
+            <span class="fw-bold text-dark">@Model.FacultyName</span>
+        </div>
+        <div class="list-group-item d-flex justify-content-between align-items-center py-3">
+            <span class="text-muted small fw-semibold"><i class="bi bi-people me-2 text-secondary"></i>Số lượng Sinh viên:</span>
+            <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-2 py-1">
+                @(Model.Students?.Count ?? 0) sinh viên
+            </span>
+        </div>
+    </div>
+</div>
+
+<div class="modal-footer bg-light d-flex justify-content-between">
+    <button type="button" class="btn btn-outline-secondary btn-sm px-3" data-bs-dismiss="modal">Đóng</button>
+    @if (canEdit)
+    {
+        <button type="button"
+                class="btn btn-warning btn-sm px-3 fw-semibold text-dark"
+                data-modal-url="@Url.Action("Edit", "Faculty", new { id = Model.FacultyId })">
+            <i class="bi bi-pencil-square me-1"></i> Chỉnh sửa
+        </button>
+    }
+</div>

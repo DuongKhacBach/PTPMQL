@@ -1,0 +1,41 @@
+@model DemoMVC.Models.Faculty
+
+<div class="modal-header bg-primary text-white">
+    <h5 class="modal-title fw-bold" id="crudModalLabel">
+        <i class="bi bi-building-add me-2"></i>Thêm mới Khoa
+    </h5>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Đóng"></button>
+</div>
+
+<form asp-controller="Faculty" asp-action="Create" method="post" data-ajax-form="true" autocomplete="off">
+    <div class="modal-body p-4">
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 small" role="alert"></div>
+        <div class="alert alert-danger py-2 small d-none" data-modal-error role="alert"></div>
+
+        <div class="row g-3 mb-3">
+            <div class="col-md-6">
+                <label asp-for="FacultyId" class="form-label fw-semibold text-dark small"></label>
+                <input asp-for="FacultyId" class="form-control text-uppercase font-monospace" placeholder="VD: CNTT, MO, DC..." maxlength="10" required />
+                <span asp-validation-for="FacultyId" class="text-danger small mt-1 d-block"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="FacultyCode" class="form-label fw-semibold text-dark small"></label>
+                <input asp-for="FacultyCode" class="form-control font-monospace" maxlength="2" data-digits-only="true" placeholder="2 số, VD: 05, 10..." required />
+                <span asp-validation-for="FacultyCode" class="text-danger small mt-1 d-block"></span>
+            </div>
+        </div>
+
+        <div class="mb-2">
+            <label asp-for="FacultyName" class="form-label fw-semibold text-dark small"></label>
+            <input asp-for="FacultyName" class="form-control" placeholder="VD: Công nghệ thông tin..." required />
+            <span asp-validation-for="FacultyName" class="text-danger small mt-1 d-block"></span>
+        </div>
+    </div>
+
+    <div class="modal-footer bg-light">
+        <button type="button" class="btn btn-outline-secondary btn-sm px-3" data-bs-dismiss="modal">Hủy</button>
+        <button type="submit" class="btn btn-primary btn-sm px-4">
+            <i class="bi bi-check-lg me-1"></i> Lưu Khoa
+        </button>
+    </div>
+</form>

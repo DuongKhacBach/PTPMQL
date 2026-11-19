@@ -10,11 +10,16 @@ namespace DemoMVC.Areas.Identity.Pages.Account
     public class LoginModel : PageModel
     {
         private readonly SignInManager<ApplicationUser> _signInManager;
+        private readonly UserManager<ApplicationUser> _userManager;
         private readonly ILogger<LoginModel> _logger;
 
-        public LoginModel(SignInManager<ApplicationUser> signInManager, ILogger<LoginModel> logger)
+        public LoginModel(
+            SignInManager<ApplicationUser> signInManager,
+            UserManager<ApplicationUser> userManager,
+            ILogger<LoginModel> logger)
         {
             _signInManager = signInManager;
+            _userManager = userManager;
             _logger = logger;
         }
 
@@ -67,11 +72,12 @@ namespace DemoMVC.Areas.Identity.Pages.Account
 
             if (ModelState.IsValid)
             {
-                // Đặt lockoutOnFailure: true để khóa tài khoản khi nhập sai quá số lần quy định
-                var result = await _signInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: true);
+                var result = await _signInManager.PasswordSignInAsync(
+                    Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: true);
+
                 if (result.Succeeded)
                 {
-                    _logger.LogInformation("Người dùng đã đăng nhập thành công.");
+                    _logger.LogInformation("Người dùng {Email} đã đăng nhập thành công.", Input.Email);
                     return LocalRedirect(returnUrl);
                 }
                 if (result.RequiresTwoFactor)
@@ -80,19 +86,27 @@ namespace DemoMVC.Areas.Identity.Pages.Account
                 }
                 if (result.IsLockedOut)
                 {
-                    _logger.LogWarning("Tài khoản người dùng đã bị khóa tạm thời.");
-                    ModelState.AddModelError(string.Empty, "Tài khoản đã bị khóa tạm thời 5 phút do đăng nhập sai quá 5 lần.");
-                    return Page();
+                    _logger.LogWarning("Tài khoản {Email} đã bị khóa tạm thời do nhập sai quá số lần quy định.", Input.Email);
+                    return RedirectToPage("./Lockout");
                 }
-                else
+                if (result.IsNotAllowed)
                 {
-                    ModelState.AddModelError(string.Empty, "Email hoặc mật khẩu không chính xác.");
+                    var user = await _userManager.FindByEmailAsync(Input.Email);
+                    if (user != null && !await _userManager.IsEmailConfirmedAsync(user))
+                    {
+                        ModelState.AddModelError(string.Empty,
+                            "Tài khoản của bạn chưa xác nhận địa chỉ Email. Vui lòng kiểm tra hộp thư hoặc bấm 'Gửi lại email xác nhận'.");
+                        return Page();
+                    }
+                    ModelState.AddModelError(string.Empty, "Tài khoản không được phép đăng nhập.");
                     return Page();
                 }
+
+                ModelState.AddModelError(string.Empty, "Email hoặc mật khẩu không chính xác.");
+                return Page();
             }
 
             return Page();
         }
     }
 }
-

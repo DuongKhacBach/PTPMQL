@@ -1,8 +1,12 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text;
+using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.WebUtilities;
 using DemoMVC.Models;
 
 namespace DemoMVC.Areas.Identity.Pages.Account
@@ -14,18 +18,21 @@ namespace DemoMVC.Areas.Identity.Pages.Account
         private readonly IUserStore<ApplicationUser> _userStore;
         private readonly IUserEmailStore<ApplicationUser> _emailStore;
         private readonly ILogger<RegisterModel> _logger;
+        private readonly IEmailSender _emailSender;
 
         public RegisterModel(
             UserManager<ApplicationUser> userManager,
             IUserStore<ApplicationUser> userStore,
             SignInManager<ApplicationUser> signInManager,
-            ILogger<RegisterModel> logger)
+            ILogger<RegisterModel> logger,
+            IEmailSender emailSender)
         {
             _userManager = userManager;
             _userStore = userStore;
             _emailStore = GetEmailStore();
             _signInManager = signInManager;
             _logger = logger;
+            _emailSender = emailSender;
         }
 
         [BindProperty]
@@ -71,7 +78,7 @@ namespace DemoMVC.Areas.Identity.Pages.Account
             if (ModelState.IsValid)
             {
                 var user = CreateUser();
-                user.FullName = Input.FullName;
+                user.FullName = Input.FullName.Trim();
 
                 await _userStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
                 await _emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
@@ -79,10 +86,42 @@ namespace DemoMVC.Areas.Identity.Pages.Account
 
                 if (result.Succeeded)
                 {
-                    _logger.LogInformation("Người dùng đã tạo tài khoản mới thành công.");
+                    _logger.LogInformation("Người dùng {Email} đã tạo tài khoản mới thành công.", Input.Email);
 
-                    await _signInManager.SignInAsync(user, isPersistent: false);
-                    return LocalRedirect(returnUrl);
+                    var userId = await _userManager.GetUserIdAsync(user);
+                    var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+                    code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+                    var callbackUrl = Url.Page(
+                        "/Account/ConfirmEmail",
+                        pageHandler: null,
+                        values: new { area = "Identity", userId = userId, code = code, returnUrl = returnUrl },
+                        protocol: Request.Scheme);
+
+                    var encodedUrl = HtmlEncoder.Default.Encode(callbackUrl ?? string.Empty);
+                    var emailBody = $@"
+                        <div style='font-family: Arial, sans-serif; line-height: 1.6; color: #1e293b;'>
+                            <h2 style='color: #0d6efd;'>Xác nhận đăng ký tài khoản - DemoMVC HUMG</h2>
+                            <p>Xin chào <strong>{HtmlEncoder.Default.Encode(user.FullName)}</strong>,</p>
+                            <p>Cảm ơn bạn đã đăng ký tài khoản trên Hệ thống Quản lý Sinh viên HUMG. Vui lòng nhấn vào nút dưới đây để xác nhận địa chỉ Email của bạn:</p>
+                            <p style='margin: 24px 0;'>
+                                <a href='{encodedUrl}' style='background-color: #0d6efd; color: #ffffff; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: bold;'>
+                                    Xác nhận tài khoản
+                                </a>
+                            </p>
+                            <p style='font-size: 0.9em; color: #64748b;'>Hoặc sao chép đường dẫn sau vào trình duyệt:<br/>{encodedUrl}</p>
+                        </div>";
+
+                    await _emailSender.SendEmailAsync(Input.Email, "Xác nhận tài khoản - Hệ thống Quản lý Sinh viên HUMG", emailBody);
+
+                    if (_userManager.Options.SignIn.RequireConfirmedAccount)
+                    {
+                        return RedirectToPage("RegisterConfirmation", new { email = Input.Email, returnUrl = returnUrl });
+                    }
+                    else
+                    {
+                        await _signInManager.SignInAsync(user, isPersistent: false);
+                        return LocalRedirect(returnUrl);
+                    }
                 }
                 foreach (var error in result.Errors)
                 {
@@ -115,4 +154,3 @@ namespace DemoMVC.Areas.Identity.Pages.Account
         }
     }
 }
-

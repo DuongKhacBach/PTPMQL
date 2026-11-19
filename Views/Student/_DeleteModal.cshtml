@@ -1,0 +1,46 @@
+@model DemoMVC.Models.Student
+
+<div class="modal-header bg-danger text-white">
+    <h5 class="modal-title fw-bold" id="crudModalLabel">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>Xác nhận xóa Sinh viên
+    </h5>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Đóng"></button>
+</div>
+
+<form asp-controller="Student" asp-action="Delete" asp-route-id="@Model.StudentId" method="post" data-ajax-form="true">
+    <input type="hidden" asp-for="StudentId" />
+    <div class="modal-body p-4">
+        <div class="alert alert-danger py-2 small d-none" data-modal-error role="alert"></div>
+        <div class="alert alert-warning py-2 mb-3 small" role="alert">
+            <i class="bi bi-info-circle-fill me-1"></i> Hành động này sẽ xóa vĩnh viễn bản ghi sinh viên dưới đây khỏi hệ thống!
+        </div>
+
+        <div class="list-group list-group-flush border rounded-2">
+            <div class="list-group-item d-flex justify-content-between align-items-center py-2">
+                <span class="text-muted small fw-semibold">Mã sinh viên (ID):</span>
+                <span class="fw-bold text-primary font-monospace">@Model.StudentId</span>
+            </div>
+            <div class="list-group-item d-flex justify-content-between align-items-center py-2">
+                <span class="text-muted small fw-semibold">Họ và tên:</span>
+                <span class="fw-bold text-dark">@Model.FullName</span>
+            </div>
+            <div class="list-group-item d-flex justify-content-between align-items-center py-2">
+                <span class="text-muted small fw-semibold">Khoa:</span>
+                <span>@(Model.Faculty != null ? Model.Faculty.FacultyName : "Chưa phân khoa")</span>
+            </div>
+            <div class="list-group-item d-flex justify-content-between align-items-center py-2">
+                <span class="text-muted small fw-semibold">Số điện thoại:</span>
+                <span class="text-secondary font-monospace">@(string.IsNullOrEmpty(Model.PhoneNumber) ? "Chưa có" : Model.PhoneNumber)</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-footer bg-light d-flex justify-content-between">
+        <button type="button" class="btn btn-outline-secondary btn-sm px-3" data-bs-dismiss="modal">
+            <i class="bi bi-arrow-left me-1"></i> Hủy bỏ
+        </button>
+        <button type="submit" class="btn btn-danger btn-sm px-4">
+            <i class="bi bi-trash-fill me-1"></i> Xác nhận xóa
+        </button>
+    </div>
+</form>

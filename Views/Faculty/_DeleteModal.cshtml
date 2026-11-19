@@ -1,0 +1,44 @@
+@model DemoMVC.Models.Faculty
+
+<div class="modal-header bg-danger text-white">
+    <h5 class="modal-title fw-bold" id="crudModalLabel">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>Xác nhận xóa Khoa
+    </h5>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Đóng"></button>
+</div>
+
+<form asp-controller="Faculty" asp-action="Delete" asp-route-id="@Model.FacultyId" method="post" data-ajax-form="true">
+    <input type="hidden" asp-for="FacultyId" />
+    <div class="modal-body p-4">
+        <div class="alert alert-danger py-2 small d-none" data-modal-error role="alert"></div>
+        <div class="alert alert-warning py-2 mb-3 small" role="alert">
+            <i class="bi bi-info-circle-fill me-1"></i> Lưu ý: Không thể xóa Khoa nếu đang có sinh viên trực thuộc!
+        </div>
+
+        <div class="list-group list-group-flush border rounded-2">
+            <div class="list-group-item d-flex justify-content-between align-items-center py-2">
+                <span class="text-muted small fw-semibold">Mã Khoa:</span>
+                <span class="fw-bold text-primary font-monospace">@Model.FacultyId</span>
+            </div>
+            <div class="list-group-item d-flex justify-content-between align-items-center py-2">
+                <span class="text-muted small fw-semibold">Mã số ngành:</span>
+                <span class="fw-bold font-monospace">@Model.FacultyCode</span>
+            </div>
+            <div class="list-group-item d-flex justify-content-between align-items-center py-2">
+                <span class="text-muted small fw-semibold">Tên Khoa:</span>
+                <span class="fw-bold text-dark">@Model.FacultyName</span>
+            </div>
+            <div class="list-group-item d-flex justify-content-between align-items-center py-2">
+                <span class="text-muted small fw-semibold">Sinh viên trực thuộc:</span>
+                <span class="badge bg-secondary-subtle text-secondary border">@(Model.Students?.Count ?? 0) sinh viên</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-footer bg-light d-flex justify-content-between">
+        <button type="button" class="btn btn-outline-secondary btn-sm px-3" data-bs-dismiss="modal">Hủy bỏ</button>
+        <button type="submit" class="btn btn-danger btn-sm px-4">
+            <i class="bi bi-trash-fill me-1"></i> Xác nhận xóa
+        </button>
+    </div>
+</form>

@@ -1,0 +1,45 @@
+@model Microsoft.AspNetCore.Identity.IdentityRole
+@{
+    int userCount = ViewBag.UserCount is int uc ? uc : 0;
+    int claimCount = ViewBag.ClaimCount is int cc ? cc : 0;
+}
+
+<div class="modal-header bg-danger text-white">
+    <h5 class="modal-title fw-bold" id="crudModalLabel">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>Xác nhận xóa Role
+    </h5>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Đóng"></button>
+</div>
+
+<form asp-controller="Role" asp-action="Delete" asp-route-id="@Model.Id" method="post" data-ajax-form="true">
+    <input type="hidden" name="id" value="@Model.Id" />
+    <div class="modal-body p-4">
+        <div class="alert alert-danger py-2 small d-none" data-modal-error role="alert"></div>
+        <p class="mb-3">Bạn có chắc chắn muốn xóa vai trò <strong class="text-danger">@Model.Name</strong> khỏi hệ thống không?</p>
+        <div class="list-group list-group-flush border rounded-2 small">
+            <div class="list-group-item d-flex justify-content-between py-2">
+                <span class="text-muted">Role ID:</span>
+                <span class="font-monospace">@Model.Id</span>
+            </div>
+            <div class="list-group-item d-flex justify-content-between py-2">
+                <span class="text-muted">Tên Role:</span>
+                <span class="fw-bold text-primary">@Model.Name</span>
+            </div>
+            <div class="list-group-item d-flex justify-content-between py-2">
+                <span class="text-muted">Số quyền (Claims) đang gán:</span>
+                <span class="badge bg-secondary-subtle text-secondary border">@claimCount quyền</span>
+            </div>
+            <div class="list-group-item d-flex justify-content-between py-2">
+                <span class="text-muted">Tài khoản đang giữ Role này:</span>
+                <span class="badge bg-warning-subtle text-warning-emphasis border">@userCount tài khoản</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-footer bg-light d-flex justify-content-between">
+        <button type="button" class="btn btn-outline-secondary btn-sm px-3" data-bs-dismiss="modal">Hủy</button>
+        <button type="submit" class="btn btn-danger btn-sm px-4">
+            <i class="bi bi-trash me-1"></i> Xác nhận xóa
+        </button>
+    </div>
+</form>

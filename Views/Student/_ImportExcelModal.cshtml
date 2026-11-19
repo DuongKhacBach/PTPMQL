@@ -1,0 +1,136 @@
+<div class="modal-header bg-success text-white">
+    <h5 class="modal-title fw-bold" id="crudModalLabel">
+        <i class="bi bi-file-earmark-arrow-up me-2"></i>Nhập danh sách Sinh viên từ Excel (.xlsx)
+    </h5>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Đóng"></button>
+</div>
+
+<form id="importExcelForm"
+      asp-controller="Student"
+      asp-action="ImportExcel"
+      data-preview-url="@Url.Action("PreviewImportExcel", "Student")"
+      method="post"
+      enctype="multipart/form-data"
+      data-ajax-form="true">
+    <div class="modal-body p-4">
+        <div class="alert alert-danger py-2 small d-none" data-modal-error role="alert"></div>
+
+        <!-- BƯỚC 1: Chọn file & Kiểm tra xem trước -->
+        <div class="border rounded-3 p-3 bg-light-subtle mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="badge bg-success">Bước 1</span>
+                <a asp-controller="Student" asp-action="DownloadSampleExcel" class="btn btn-sm btn-outline-success fw-semibold">
+                    <i class="bi bi-download me-1"></i>Tải file mẫu 100 SV (.xlsx)
+                </a>
+            </div>
+            <label for="excelFileInput" class="form-label fw-semibold small">
+                Chọn tệp Excel (.xlsx) chứa danh sách Sinh viên <span class="text-danger">*</span>
+            </label>
+            <div class="input-group input-group-sm">
+                <input type="file" id="excelFileInput" name="excelFile" class="form-control" accept=".xlsx" required />
+                <button type="button" id="btnPreviewImport" class="btn btn-primary px-3 fw-semibold">
+                    <i class="bi bi-search me-1"></i>Kiểm tra &amp; Xem trước
+                </button>
+            </div>
+            <div class="form-text text-muted mt-2 small">
+                <i class="bi bi-info-circle me-1"></i>Hỗ trợ <strong>6 cột</strong> (<code>STT | Mã SV | Họ tên | SĐT | Mã Khoa | Tên Khoa</code>) và <strong>4 cột</strong> (<code>Mã SV | Họ tên | SĐT | Mã Khoa</code>). Hệ thống kiểm tra chặt SĐT (10-11 số bắt đầu bằng 0) và Khoa tồn tại.
+            </div>
+        </div>
+
+        <!-- KẾT QUẢ PHÂN TÍCH BƯỚC 1 -->
+        <div id="importPreviewSection" class="d-none mb-3">
+            <h6 class="fw-bold text-dark small text-uppercase mb-2">
+                <i class="bi bi-bar-chart-fill text-primary me-1"></i>Kết quả kiểm tra dữ liệu tệp Excel
+            </h6>
+            <div class="row g-2 text-center mb-3">
+                <div class="col-6 col-md">
+                    <div class="border rounded-2 p-2 bg-light">
+                        <div class="small text-muted">Tổng dòng</div>
+                        <div class="fs-5 fw-bold text-dark" data-stat="total">0</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md">
+                    <div class="border rounded-2 p-2 bg-primary-subtle">
+                        <div class="small text-primary">Hợp lệ</div>
+                        <div class="fs-5 fw-bold text-primary" data-stat="valid">0</div>
+                    </div>
+                </div>
+                <div class="col-4 col-md">
+                    <div class="border rounded-2 p-2 bg-success-subtle">
+                        <div class="small text-success">Thêm mới</div>
+                        <div class="fs-5 fw-bold text-success" data-stat="new">0</div>
+                    </div>
+                </div>
+                <div class="col-4 col-md">
+                    <div class="border rounded-2 p-2 bg-warning-subtle">
+                        <div class="small text-warning-emphasis">Trùng Mã SV</div>
+                        <div class="fs-5 fw-bold text-warning-emphasis" data-stat="duplicate">0</div>
+                    </div>
+                </div>
+                <div class="col-4 col-md">
+                    <div class="border rounded-2 p-2 bg-danger-subtle">
+                        <div class="small text-danger">Dòng lỗi</div>
+                        <div class="fs-5 fw-bold text-danger" data-stat="error">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Danh sách mã trùng khóa chính (tối đa 10 mã minh họa) -->
+            <div id="importDuplicateListBox" class="alert alert-warning py-2 px-3 small d-none mb-2">
+                <div class="fw-semibold mb-1">
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i>Phát hiện Mã sinh viên đã tồn tại trong CSDL (tối đa 10 mã minh họa):
+                </div>
+                <div id="importDuplicateList" class="d-flex flex-wrap gap-1 mt-1"></div>
+            </div>
+
+            <!-- Danh sách dòng lỗi -->
+            <div id="importErrorListBox" class="alert alert-danger py-2 px-3 small d-none mb-0">
+                <div class="fw-semibold mb-1">
+                    <i class="bi bi-x-octagon-fill me-1"></i>Chi tiết các dòng không hợp lệ (sẽ bị bỏ qua):
+                </div>
+                <ul id="importErrorList" class="mb-0 ps-3"></ul>
+            </div>
+        </div>
+
+        <!-- BƯỚC 2: Xác nhận chế độ Ghi bổ sung / Ghi đè -->
+        <div id="importStep2Section" class="border border-primary-subtle rounded-3 p-3 bg-primary-subtle bg-opacity-10 d-none">
+            <div class="mb-2">
+                <span class="badge bg-primary me-1">Bước 2</span>
+                <strong class="small text-dark">Bắt buộc chọn chế độ nhập dữ liệu để xác nhận:</strong>
+            </div>
+
+            <div class="d-flex flex-column gap-2">
+                <label class="border rounded-2 p-2 bg-white d-flex align-items-start gap-2 cursor-pointer">
+                    <input class="form-check-input mt-1" type="radio" name="importMode" value="append" required />
+                    <div class="small">
+                        <div class="fw-bold text-success">
+                            <i class="bi bi-plus-circle me-1"></i>Chỉ ghi bổ sung (Append)
+                        </div>
+                        <div class="text-muted">
+                            Chỉ thêm mới <strong data-label-new-count>0</strong> sinh viên chưa tồn tại; giữ nguyên/bỏ qua toàn bộ <strong data-label-dup-count>0</strong> sinh viên bị trùng Mã SV.
+                        </div>
+                    </div>
+                </label>
+
+                <label class="border rounded-2 p-2 bg-white d-flex align-items-start gap-2 cursor-pointer">
+                    <input class="form-check-input mt-1" type="radio" name="importMode" value="overwrite" required />
+                    <div class="small">
+                        <div class="fw-bold text-warning-emphasis">
+                            <i class="bi bi-arrow-repeat me-1"></i>Ghi đè dữ liệu trùng &amp; thêm mới (Overwrite)
+                        </div>
+                        <div class="text-muted">
+                            Cập nhật đè thông tin <strong data-label-dup-count-2>0</strong> sinh viên trùng Mã SV và thêm mới <strong data-label-new-count-2>0</strong> sinh viên chưa có.
+                        </div>
+                    </div>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-footer bg-light d-flex justify-content-between">
+        <button type="button" class="btn btn-outline-secondary btn-sm px-3" data-bs-dismiss="modal">Hủy</button>
+        <button type="submit" id="btnConfirmImport" class="btn btn-success btn-sm px-4 fw-semibold" disabled>
+            <i class="bi bi-cloud-check-fill me-1"></i>Xác nhận nhập dữ liệu
+        </button>
+    </div>
+</form>

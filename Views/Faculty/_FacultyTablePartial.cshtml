@@ -1,0 +1,180 @@
+@model DemoMVC.Models.PaginatedList<DemoMVC.Models.Faculty>
+@inject IAuthorizationService AuthorizationService
+
+@{
+    var currentFilter = ViewData["CurrentFilter"] as string;
+    var currentPageSize = ViewData["CurrentPageSize"] is int ps ? ps : (Model?.PageSize ?? 5);
+
+    bool canDetails = (await AuthorizationService.AuthorizeAsync(User, SystemPermissions.Faculty.Details)).Succeeded;
+    bool canEdit = (await AuthorizationService.AuthorizeAsync(User, SystemPermissions.Faculty.Edit)).Succeeded;
+    bool canDelete = (await AuthorizationService.AuthorizeAsync(User, SystemPermissions.Faculty.Delete)).Succeeded;
+}
+
+<div data-total-items="@(Model?.TotalItems ?? 0)" data-current-filter="@(currentFilter ?? string.Empty)">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light text-muted small text-uppercase">
+                    <tr>
+                        <th class="ps-3 py-2" style="width: 140px;">Mã Khoa</th>
+                        <th class="py-2" style="width: 170px;">Mã số ngành (2 số)</th>
+                        <th class="py-2">Tên Khoa</th>
+                        <th class="py-2" style="width: 160px;">Số lượng SV</th>
+                        <th class="text-end pe-3 py-2" style="width: 150px;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody class="border-top-0">
+                    @if (Model != null && Model.Any())
+                    {
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td class="ps-3 fw-bold text-primary">
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 font-monospace">
+                                        @item.FacultyId
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-dark-subtle text-dark border px-2 py-1 font-monospace">
+                                        @item.FacultyCode
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="fw-semibold text-dark">@item.FacultyName</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary-subtle text-secondary border px-2 py-1">
+                                        @(item.Students?.Count ?? 0) sinh viên
+                                    </span>
+                                </td>
+                                <td class="text-end pe-3">
+                                    <div class="btn-group btn-group-sm">
+                                        @if (canDetails)
+                                        {
+                                            <button type="button"
+                                                    class="btn btn-outline-secondary btn-sm py-1 px-2"
+                                                    data-modal-url="@Url.Action("Details", "Faculty", new { id = item.FacultyId })"
+                                                    title="Chi tiết">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        }
+                                        @if (canEdit)
+                                        {
+                                            <button type="button"
+                                                    class="btn btn-outline-warning btn-sm py-1 px-2"
+                                                    data-modal-url="@Url.Action("Edit", "Faculty", new { id = item.FacultyId })"
+                                                    title="Chỉnh sửa">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                        }
+                                        @if (canDelete)
+                                        {
+                                            <button type="button"
+                                                    class="btn btn-outline-danger btn-sm py-1 px-2"
+                                                    data-modal-url="@Url.Action("Delete", "Faculty", new { id = item.FacultyId })"
+                                                    title="Xóa">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-4">
+                                <i class="bi bi-inbox fs-3 d-block text-secondary mb-2"></i>
+                                @if (!string.IsNullOrEmpty(currentFilter))
+                                {
+                                    <span>Không tìm thấy Khoa nào khớp với từ khóa "@currentFilter".</span>
+                                    <div class="mt-2">
+                                        <a asp-action="Index" asp-route-pageSize="@currentPageSize"
+                                           data-ajax-link="true" data-ajax-clear-filter="true"
+                                           class="btn btn-sm btn-outline-secondary">
+                                            <i class="bi bi-arrow-clockwise me-1"></i> Xóa bộ lọc
+                                        </a>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span>Chưa có khoa nào trong hệ thống.</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Thanh phân trang (Pagination Footer) -->
+    @if (Model != null && Model.TotalItems > 0)
+    {
+        <div class="card-footer bg-white py-3 border-top d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div class="text-muted small">
+                Hiển thị <strong>@Model.StartItemIndex</strong> - <strong>@Model.EndItemIndex</strong> trong tổng số <strong>@Model.TotalItems</strong> khoa
+                <span class="ms-1 text-secondary">(Trang @Model.PageIndex / @Model.TotalPages)</span>
+            </div>
+
+            @if (Model.TotalPages > 1)
+            {
+                <nav aria-label="Phân trang danh sách khoa">
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item @(Model.HasPreviousPage ? "" : "disabled")">
+                            <a class="page-link" asp-action="Index"
+                               asp-route-pageNumber="1"
+                               asp-route-pageSize="@currentPageSize"
+                               asp-route-searchString="@currentFilter"
+                               data-ajax-link="true"
+                               title="Trang đầu">
+                                <i class="bi bi-chevron-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item @(Model.HasPreviousPage ? "" : "disabled")">
+                            <a class="page-link" asp-action="Index"
+                               asp-route-pageNumber="@(Model.PageIndex - 1)"
+                               asp-route-pageSize="@currentPageSize"
+                               asp-route-searchString="@currentFilter"
+                               data-ajax-link="true">
+                                <i class="bi bi-chevron-left"></i> Trước
+                            </a>
+                        </li>
+
+                        @for (int i = 1; i <= Model.TotalPages; i++)
+                        {
+                            <li class="page-item @(i == Model.PageIndex ? "active" : "")">
+                                <a class="page-link" asp-action="Index"
+                                   asp-route-pageNumber="@i"
+                                   asp-route-pageSize="@currentPageSize"
+                                   asp-route-searchString="@currentFilter"
+                                   data-ajax-link="true">@i</a>
+                            </li>
+                        }
+
+                        <li class="page-item @(Model.HasNextPage ? "" : "disabled")">
+                            <a class="page-link" asp-action="Index"
+                               asp-route-pageNumber="@(Model.PageIndex + 1)"
+                               asp-route-pageSize="@currentPageSize"
+                               asp-route-searchString="@currentFilter"
+                               data-ajax-link="true">
+                                Sau <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item @(Model.HasNextPage ? "" : "disabled")">
+                            <a class="page-link" asp-action="Index"
+                               asp-route-pageNumber="@Model.TotalPages"
+                               asp-route-pageSize="@currentPageSize"
+                               asp-route-searchString="@currentFilter"
+                               data-ajax-link="true"
+                               title="Trang cuối">
+                                <i class="bi bi-chevron-double-right"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            }
+        </div>
+    }
+</div>

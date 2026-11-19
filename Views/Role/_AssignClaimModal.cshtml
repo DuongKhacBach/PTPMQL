@@ -1,0 +1,105 @@
+@model DemoMVC.Models.ViewModels.RoleClaimVM
+@{
+    var groupedClaims = Model.Claims
+        .Select((claim, index) => new { Claim = claim, Index = index })
+        .GroupBy(x => x.Claim.Group)
+        .ToList();
+}
+
+<div class="modal-header bg-primary text-white">
+    <div>
+        <h5 class="modal-title fw-bold mb-0" id="crudModalLabel">
+            <i class="bi bi-sliders me-2"></i>Phân quyền động cho Role: <span class="badge bg-white text-primary ms-1">@Model.RoleName</span>
+        </h5>
+        <small class="opacity-75">Tích chọn hoặc bỏ chọn các quyền (Permission Claims) theo từng nhóm Controller</small>
+    </div>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Đóng"></button>
+</div>
+
+<form asp-controller="Role" asp-action="AssignClaim" method="post" data-ajax-form="true">
+    <input type="hidden" asp-for="RoleId" />
+    <input type="hidden" asp-for="RoleName" />
+
+    <div class="modal-body p-4" style="max-height: 68vh; overflow-y: auto;" data-permission-matrix="true">
+        <div class="alert alert-danger py-2 small d-none" data-modal-error role="alert"></div>
+
+        <!-- Thanh công cụ chọn nhanh toàn bộ -->
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3 pb-2 border-bottom">
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2" data-total-selected-badge>
+                @Model.Claims.Count(c => c.Selected) / @Model.Claims.Count quyền đã chọn
+            </span>
+            <div class="btn-group btn-group-sm">
+                <button type="button" class="btn btn-outline-success" data-select-all-permissions="true">
+                    <i class="bi bi-check2-all me-1"></i>Chọn tất cả
+                </button>
+                <button type="button" class="btn btn-outline-secondary" data-select-all-permissions="false">
+                    <i class="bi bi-x-square me-1"></i>Bỏ chọn tất cả
+                </button>
+            </div>
+        </div>
+
+        <!-- Gom nhóm quyền theo Controller -->
+        <div class="row g-3">
+            @foreach (var group in groupedClaims)
+            {
+                <div class="col-12" data-permission-group="@group.Key">
+                    <div class="card border shadow-none">
+                        <div class="card-header bg-light py-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-folder2-open text-primary"></i>
+                                <span class="fw-bold text-dark small">@group.Key</span>
+                                <span class="badge bg-primary-subtle text-primary rounded-pill" data-group-count-badge>
+                                    @group.Count(x => x.Claim.Selected)/@group.Count()
+                                </span>
+                            </div>
+                            <div class="btn-group btn-group-sm">
+                                <button type="button" class="btn btn-outline-primary py-0 px-2" style="font-size: 0.78rem;"
+                                        data-select-group="@group.Key" data-check-state="true">
+                                    Chọn nhóm
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary py-0 px-2" style="font-size: 0.78rem;"
+                                        data-select-group="@group.Key" data-check-state="false">
+                                    Bỏ chọn nhóm
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body py-2 px-3">
+                            <div class="row g-2">
+                                @foreach (var item in group)
+                                {
+                                    var i = item.Index;
+                                    <div class="col-md-6">
+                                        <input type="hidden" name="Claims[@i].Type" value="@item.Claim.Type" />
+                                        <input type="hidden" name="Claims[@i].Value" value="@item.Claim.Value" />
+                                        <input type="hidden" name="Claims[@i].DisplayName" value="@item.Claim.DisplayName" />
+                                        <input type="hidden" name="Claims[@i].Group" value="@item.Claim.Group" />
+                                        <label class="border rounded-2 p-2 d-flex align-items-start gap-2 h-100 bg-white cursor-pointer" for="claim_@i">
+                                            <input class="form-check-input permission-checkbox mt-1 flex-shrink-0"
+                                                   type="checkbox"
+                                                   id="claim_@i"
+                                                   name="Claims[@i].Selected"
+                                                   value="true"
+                                                   @(item.Claim.Selected ? "checked" : null) />
+                                            <div class="small">
+                                                <div class="fw-semibold text-dark">@item.Claim.DisplayName</div>
+                                                <div class="text-muted" style="font-size: 0.78rem;">@item.Claim.Description</div>
+                                                <code class="text-primary" style="font-size: 0.72rem;">@item.Claim.Value</code>
+                                            </div>
+                                        </label>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="modal-footer bg-light d-flex justify-content-between">
+        <button type="button" class="btn btn-outline-secondary btn-sm px-3" data-bs-dismiss="modal">Hủy</button>
+        <button type="submit" class="btn btn-primary btn-sm px-4 fw-semibold">
+            <i class="bi bi-check-lg me-1"></i> Lưu thay đổi phân quyền
+        </button>
+    </div>
+</form>

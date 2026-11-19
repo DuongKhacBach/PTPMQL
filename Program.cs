@@ -1,9 +1,12 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using DemoMVC.Data;
 using DemoMVC.Models;
+using DemoMVC.Models.Process;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,6 +21,11 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 // Đăng ký dịch vụ MVC Controllers with Views & Razor Pages
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
+
+// Cấu hình gửi Email qua MailKit (STT 13)
+builder.Services.AddOptions();
+builder.Services.Configure<MailSettings>(builder.Configuration.GetSection("MailSettings"));
+builder.Services.AddTransient<IEmailSender, SendMailService>();
 
 // Cấu hình ASP.NET Core Identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
@@ -34,9 +42,9 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
     options.Password.RequireUppercase = true;
     options.Password.RequireLowercase = false;
 
-    // SignIn settings
-    options.SignIn.RequireConfirmedAccount = false;
-    options.SignIn.RequireConfirmedEmail = false;
+    // SignIn settings (Bắt buộc xác thực Email khi đăng ký mới)
+    options.SignIn.RequireConfirmedAccount = true;
+    options.SignIn.RequireConfirmedEmail = true;
     options.SignIn.RequireConfirmedPhoneNumber = false;
 
     // User settings
@@ -46,10 +54,28 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 .AddDefaultTokenProviders()
 .AddDefaultUI();
 
-// Cấu hình Cookie xác thực
+// Tự động kiểm tra lại SecurityStamp định kỳ để cập nhật Role/Claim nhanh chóng
+builder.Services.Configure<SecurityStampValidatorOptions>(options =>
+{
+    options.ValidationInterval = TimeSpan.FromSeconds(10);
+});
+
+// Cấu hình Phân quyền động (Policy-based Authorization) theo từng Action (STT 14)
+builder.Services.AddAuthorization(options =>
+{
+    foreach (var permission in SystemPermissions.GetAll())
+    {
+        options.AddPolicy(permission.Value, policy =>
+            policy.RequireClaim(SystemPermissions.ClaimType, permission.Value));
+    }
+});
+
+// Cấu hình Cookie xác thực an toàn (tương thích cả HTTP và HTTPS)
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.Cookie.HttpOnly = true;
+    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
     options.ExpireTimeSpan = TimeSpan.FromMinutes(60);
     options.LoginPath = "/Identity/Account/Login";
     options.AccessDeniedPath = "/Identity/Account/AccessDenied";
@@ -64,15 +90,16 @@ builder.Services.AddDataProtection()
 
 var app = builder.Build();
 
-// Đảm bảo cấu trúc bảng trong CSDL SQLite luôn đồng bộ với Migrations và Seed Roles & Users mặc định
+// Đảm bảo cấu trúc bảng trong CSDL SQLite luôn đồng bộ với Migrations và Seed Roles, RoleClaims & Users mặc định
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
     var dbContext = services.GetRequiredService<ApplicationDbContext>();
+    var logger = services.GetRequiredService<ILogger<Program>>();
     try
     {
         dbContext.Database.Migrate();
-        await SeedRolesAndUsersAsync(services);
+        await SeedRolesAndUsersAsync(services, logger);
         await DemoMVC.Controllers.StudentController.FixInvalidPhoneNumbersAsync(dbContext);
 
         var sampleExcelPath = Path.Combine(Directory.GetCurrentDirectory(), "DanhSach_100_SinhVien_HUMG.xlsx");
@@ -84,7 +111,7 @@ using (var scope = app.Services.CreateScope())
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"DB Init Note: {ex.Message}");
+        logger.LogError(ex, "Lỗi khi khởi tạo CSDL SQLite hoặc seed dữ liệu mặc định.");
     }
 }
 
@@ -124,7 +151,7 @@ app.MapRazorPages();
 
 app.Run();
 
-static async Task SeedRolesAndUsersAsync(IServiceProvider serviceProvider)
+static async Task SeedRolesAndUsersAsync(IServiceProvider serviceProvider, ILogger logger)
 {
     var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
     var userManager = serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
@@ -132,9 +159,30 @@ static async Task SeedRolesAndUsersAsync(IServiceProvider serviceProvider)
     string[] roles = { "Admin", "GiangVien", "SinhVien" };
     foreach (var roleName in roles)
     {
-        if (!await roleManager.RoleExistsAsync(roleName))
+        var role = await roleManager.FindByNameAsync(roleName);
+        if (role == null)
         {
-            await roleManager.CreateAsync(new IdentityRole(roleName));
+            role = new IdentityRole(roleName);
+            var roleCreateResult = await roleManager.CreateAsync(role);
+            if (!roleCreateResult.Succeeded)
+            {
+                logger.LogWarning("Không thể tạo Role mặc định '{RoleName}': {Errors}",
+                    roleName, string.Join("; ", roleCreateResult.Errors.Select(e => e.Description)));
+                continue;
+            }
+        }
+
+        // Seed RoleClaims mặc định vào AspNetRoleClaims nếu Role chưa có Permission claim nào
+        var existingClaims = await roleManager.GetClaimsAsync(role);
+        if (!existingClaims.Any(c => c.Type == SystemPermissions.ClaimType))
+        {
+            var defaultPermissions = SystemPermissions.GetDefaultPermissionsForRole(roleName);
+            foreach (var permission in defaultPermissions)
+            {
+                await roleManager.AddClaimAsync(role, new Claim(SystemPermissions.ClaimType, permission));
+            }
+            logger.LogInformation("Đã seed {Count} Permission Claims mặc định cho Role '{RoleName}'.",
+                defaultPermissions.Count, roleName);
         }
     }
 
@@ -165,6 +213,11 @@ static async Task SeedRolesAndUsersAsync(IServiceProvider serviceProvider)
         }
         else
         {
+            if (!user.EmailConfirmed)
+            {
+                user.EmailConfirmed = true;
+                await userManager.UpdateAsync(user);
+            }
             if (!await userManager.IsInRoleAsync(user, item.Role))
             {
                 await userManager.AddToRoleAsync(user, item.Role);

@@ -1,0 +1,50 @@
+@model DemoMVC.Models.ViewModels.AssignRoleVM
+
+<div class="modal-header bg-primary text-white">
+    <div>
+        <h5 class="modal-title fw-bold mb-0" id="crudModalLabel">
+            <i class="bi bi-person-check-fill me-2"></i>Gán Vai trò (Role) cho Tài khoản
+        </h5>
+        <small class="opacity-75">
+            @Model.UserEmail @(!string.IsNullOrWhiteSpace(Model.FullName) ? $"({Model.FullName})" : "")
+        </small>
+    </div>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Đóng"></button>
+</div>
+
+<form asp-controller="Account" asp-action="AssignRole" method="post" data-ajax-form="true">
+    <input type="hidden" asp-for="UserId" />
+    <div class="modal-body p-4">
+        <div class="alert alert-danger py-2 small d-none" data-modal-error role="alert"></div>
+
+        <label class="form-label fw-semibold small mb-2">Chọn các vai trò (Roles) cho tài khoản này:</label>
+        @if (Model.AllRoles != null && Model.AllRoles.Any())
+        {
+            <div class="list-group">
+                @foreach (var role in Model.AllRoles)
+                {
+                    bool isChecked = Model.SelectedRoles != null && Model.SelectedRoles.Contains(role.Name);
+                    <label class="list-group-item d-flex align-items-center gap-2 cursor-pointer">
+                        <input class="form-check-input me-1"
+                               type="checkbox"
+                               name="SelectedRoles"
+                               value="@role.Name"
+                               @(isChecked ? "checked" : null) />
+                        <span class="fw-semibold">@role.Name</span>
+                    </label>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-warning small mb-0">Chưa có Role nào được khởi tạo trong hệ thống.</div>
+        }
+    </div>
+
+    <div class="modal-footer bg-light d-flex justify-content-between">
+        <button type="button" class="btn btn-outline-secondary btn-sm px-3" data-bs-dismiss="modal">Hủy</button>
+        <button type="submit" class="btn btn-primary btn-sm px-4">
+            <i class="bi bi-check-lg me-1"></i> Lưu phân quyền
+        </button>
+    </div>
+</form>

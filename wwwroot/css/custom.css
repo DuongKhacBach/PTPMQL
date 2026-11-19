@@ -159,3 +159,7 @@ main {
 .main-footer a:hover {
   color: var(--primary-color);
 }
+
+.cursor-pointer {
+  cursor: pointer;
+}

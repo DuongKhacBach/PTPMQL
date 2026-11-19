@@ -1,5 +1,6 @@
 @page
 @model LoginModel
+@inject Microsoft.AspNetCore.Hosting.IWebHostEnvironment Env
 
 @{
     ViewData["Title"] = "Đăng nhập hệ thống";
@@ -37,11 +38,16 @@
                         <span asp-validation-for="Input.Password" class="text-danger small"></span>
                     </div>
 
-                    <div class="form-check mb-3">
-                        <input class="form-check-input" asp-for="Input.RememberMe" />
-                        <label class="form-check-label small" asp-for="Input.RememberMe">
-                            @Html.DisplayNameFor(m => m.Input.RememberMe)
-                        </label>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="form-check mb-0">
+                            <input class="form-check-input" asp-for="Input.RememberMe" />
+                            <label class="form-check-label small" asp-for="Input.RememberMe">
+                                @Html.DisplayNameFor(m => m.Input.RememberMe)
+                            </label>
+                        </div>
+                        <a id="forgot-password" asp-page="./ForgotPassword" class="small fw-semibold text-decoration-none">
+                            Quên mật khẩu?
+                        </a>
                     </div>
 
                     <div class="d-grid mb-3">
@@ -50,20 +56,32 @@
                         </button>
                     </div>
 
-                    <div class="text-center small">
-                        <span class="text-muted">Chưa có tài khoản?</span>
-                        <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl" class="fw-semibold text-decoration-none">Đăng ký tài khoản mới</a>
+                    <div class="text-center small d-flex flex-column gap-1">
+                        <div>
+                            <span class="text-muted">Chưa có tài khoản?</span>
+                            <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl" class="fw-semibold text-decoration-none">Đăng ký tài khoản mới</a>
+                        </div>
+                        <div>
+                            <a id="resend-confirmation" asp-page="./ResendEmailConfirmation" class="text-muted text-decoration-none">
+                                <i class="bi bi-envelope-arrow-up me-1"></i>Gửi lại email xác nhận
+                            </a>
+                        </div>
                     </div>
                 </form>
             </div>
-            <div class="card-footer bg-light py-3 border-top small">
-                <div class="fw-semibold text-secondary mb-1"><i class="bi bi-info-circle me-1"></i>Tài khoản mẫu kiểm thử:</div>
-                <ul class="mb-0 ps-3 text-muted">
-                    <li><strong>Admin:</strong> <code>admin@humg.edu.vn</code> / <code>Admin1234</code></li>
-                    <li><strong>Giảng viên:</strong> <code>giangvien@humg.edu.vn</code> / <code>Giangvien123</code></li>
-                    <li><strong>Sinh viên:</strong> <code>sinhvien@humg.edu.vn</code> / <code>Sinhvien123</code></li>
-                </ul>
-            </div>
+            @if (Env.IsDevelopment())
+            {
+                <div class="card-footer bg-light py-3 border-top small">
+                    <div class="fw-semibold text-secondary mb-1">
+                        <i class="bi bi-info-circle me-1"></i>Tài khoản mẫu kiểm thử (chỉ hiển thị ở môi trường Development):
+                    </div>
+                    <ul class="mb-0 ps-3 text-muted">
+                        <li><strong>Admin:</strong> <code>admin@humg.edu.vn</code> / <code>Admin1234</code></li>
+                        <li><strong>Giảng viên:</strong> <code>giangvien@humg.edu.vn</code> / <code>Giangvien123</code></li>
+                        <li><strong>Sinh viên:</strong> <code>sinhvien@humg.edu.vn</code> / <code>Sinhvien123</code></li>
+                    </ul>
+                </div>
+            }
         </div>
     </div>
 </div>
@@ -71,4 +89,3 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
 }
-

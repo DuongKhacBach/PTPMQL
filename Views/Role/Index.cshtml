@@ -1,7 +1,14 @@
-@model IEnumerable<Microsoft.AspNetCore.Identity.IdentityRole>
+@model DemoMVC.Models.PaginatedList<DemoMVC.Models.ViewModels.RoleListItemVM>
+@inject IAuthorizationService AuthorizationService
 
 @{
-    ViewData["Title"] = "Quản lý Role";
+    ViewData["Title"] = "Quản lý Role & Phân quyền";
+    var currentFilter = ViewData["CurrentFilter"] as string;
+    var currentPageSize = ViewData["CurrentPageSize"] is int ps ? ps : (Model?.PageSize ?? 10);
+    int[] pageSizeOptions = new[] { 5, 10, 20, 50 };
+
+    bool canCreate = (await AuthorizationService.AuthorizeAsync(User, SystemPermissions.Role.Create)).Succeeded;
+    bool canViewAccounts = (await AuthorizationService.AuthorizeAsync(User, SystemPermissions.Account.Index)).Succeeded;
 }
 
 @if (TempData["SuccessMessage"] != null)
@@ -20,69 +27,80 @@
 }
 
 <div class="card shadow-sm border-0 rounded-3">
-    <div class="card-header bg-white py-3 border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2">
-        <div class="d-flex align-items-center gap-2">
-            <div class="bg-danger text-white rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
-                <i class="bi bi-shield-lock-fill fs-5"></i>
+    <div class="card-header bg-white py-3 border-bottom">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+            <div class="d-flex align-items-center gap-2">
+                <div class="bg-danger text-white rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
+                    <i class="bi bi-shield-lock-fill fs-5"></i>
+                </div>
+                <div>
+                    <h5 class="fw-bold text-dark mb-0">Danh sách Vai trò (Roles) &amp; Quyền động</h5>
+                    <small class="text-muted">
+                        Tổng cộng <strong data-total-count-target>@(Model?.TotalItems ?? 0)</strong> vai trò trong hệ thống
+                        <span data-filter-keyword-target class="@(string.IsNullOrEmpty(currentFilter) ? "d-none" : "")">
+                            @if (!string.IsNullOrEmpty(currentFilter))
+                            {
+                                <span>với từ khóa <mark class="px-1 rounded">"@currentFilter"</mark></span>
+                            }
+                        </span>
+                    </small>
+                </div>
             </div>
-            <div>
-                <h5 class="fw-bold text-dark mb-0">Danh sách Quyền (Roles)</h5>
-                <small class="text-muted">Tổng cộng <strong>@(Model?.Count() ?? 0)</strong> vai trò trong hệ thống</small>
+            <div class="d-flex flex-wrap gap-2">
+                @if (canViewAccounts)
+                {
+                    <a asp-controller="Account" asp-action="Index" class="btn btn-outline-primary btn-sm px-3 rounded-2">
+                        <i class="bi bi-people me-1"></i> Quản lý Tài khoản
+                    </a>
+                }
+                @if (canCreate)
+                {
+                    <button type="button"
+                            class="btn btn-primary btn-sm px-3 rounded-2"
+                            data-modal-url="@Url.Action("Create", "Role")">
+                        <i class="bi bi-plus-lg me-1"></i> Thêm Role mới
+                    </button>
+                }
             </div>
         </div>
-        <div class="d-flex gap-2">
-            <a asp-controller="Account" asp-action="Index" class="btn btn-outline-primary btn-sm px-3 rounded-2">
-                <i class="bi bi-people me-1"></i> Quản lý Tài khoản
-            </a>
-            <a asp-action="Create" class="btn btn-primary btn-sm px-3 rounded-2">
-                <i class="bi bi-plus-lg me-1"></i> Thêm Role mới
-            </a>
-        </div>
+
+        <!-- Tìm kiếm & Chọn số dòng/trang bằng AJAX -->
+        <form asp-action="Index" method="get" data-ajax-filter="true" class="row g-2 align-items-center">
+            <div class="col-md-6 col-lg-5">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-light text-muted border-end-0">
+                        <i class="bi bi-search"></i>
+                    </span>
+                    <input type="text" name="searchString" value="@currentFilter"
+                           class="form-control border-start-0 ps-0"
+                           placeholder="Tìm kiếm theo tên Role (Admin, GiangVien, SinhVien...)..." />
+                    <button type="submit" class="btn btn-primary px-3">Tìm kiếm</button>
+                    <a asp-action="Index" asp-route-pageSize="@currentPageSize"
+                       data-ajax-link="true" data-ajax-clear-filter="true"
+                       class="btn btn-outline-secondary @(string.IsNullOrEmpty(currentFilter) ? "d-none" : "")"
+                       title="Xóa tìm kiếm">
+                        <i class="bi bi-x-lg"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-7 d-flex justify-content-md-end align-items-center gap-2 small text-muted">
+                <label for="rolePageSize" class="mb-0 text-nowrap">Hiển thị:</label>
+                <select id="rolePageSize" name="pageSize" class="form-select form-select-sm py-1" style="width: auto;" data-ajax-autosubmit="true">
+                    @foreach (var size in pageSizeOptions)
+                    {
+                        <option value="@size" selected="@(size == currentPageSize ? "selected" : null)">@size dòng / trang</option>
+                    }
+                </select>
+            </div>
+        </form>
     </div>
 
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light text-muted small text-uppercase">
-                    <tr>
-                        <th class="ps-3 py-2" style="width: 340px;">Role ID</th>
-                        <th class="py-2">Tên Role</th>
-                        <th class="text-end pe-3 py-2" style="width: 160px;">Thao tác</th>
-                    </tr>
-                </thead>
-                <tbody class="border-top-0">
-                    @if (Model != null && Model.Any())
-                    {
-                        @foreach (var role in Model)
-                        {
-                            <tr>
-                                <td class="ps-3 font-monospace small text-muted">@role.Id</td>
-                                <td>
-                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 fw-semibold">
-                                        <i class="bi bi-award me-1"></i>@role.Name
-                                    </span>
-                                </td>
-                                <td class="text-end pe-3">
-                                    <div class="btn-group btn-group-sm">
-                                        <a asp-action="Edit" asp-route-id="@role.Id" class="btn btn-outline-warning btn-sm py-1 px-2" title="Chỉnh sửa">
-                                            <i class="bi bi-pencil"></i> Sửa
-                                        </a>
-                                        <a asp-action="Delete" asp-route-id="@role.Id" class="btn btn-outline-danger btn-sm py-1 px-2" title="Xóa">
-                                            <i class="bi bi-trash"></i> Xóa
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
-                        }
-                    }
-                    else
-                    {
-                        <tr>
-                            <td colspan="3" class="text-center text-muted py-4">Chưa có Role nào trong hệ thống.</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
+    <!-- Container bảng Role tải động bằng AJAX -->
+    <div id="dataTableContainer">
+        @await Html.PartialAsync("_RoleTablePartial", Model)
     </div>
 </div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

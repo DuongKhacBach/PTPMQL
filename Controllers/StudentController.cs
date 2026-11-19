@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using DemoMVC.Data;
 using DemoMVC.Models;
+using DemoMVC.Models.Process;
+using DemoMVC.Models.ViewModels;
 
 namespace DemoMVC.Controllers
 {
@@ -22,15 +24,14 @@ namespace DemoMVC.Controllers
         }
 
         // =======================================================
-        // 1. READ (Xem danh sách với LINQ: Tìm kiếm, Lọc Khoa, Sắp xếp, Phân trang & Include Khoa)
+        // 1. READ (Danh sách LINQ: Tìm kiếm, Lọc Khoa, Sắp xếp, Phân trang)
         // =======================================================
-        // GET: /Student?searchString=...&facultyId=...&sortOrder=...&pageNumber=1&pageSize=5
         [HttpGet]
-        [Authorize(Roles = "Admin,GiangVien,SinhVien")]
+        [Authorize(Policy = SystemPermissions.Student.Index)]
         public async Task<IActionResult> Index(string? searchString, string? facultyId, string? sortOrder, int? pageNumber, int? pageSize)
         {
-            int currentPageSize = pageSize ?? 5;
-            int currentPageNumber = pageNumber ?? 1;
+            int currentPageSize = pageSize is > 0 and <= 100 ? pageSize.Value : 5;
+            int currentPageNumber = pageNumber is > 0 ? pageNumber.Value : 1;
 
             ViewData["CurrentFilter"] = searchString;
             ViewData["CurrentFaculty"] = facultyId;
@@ -43,14 +44,21 @@ namespace DemoMVC.Controllers
             await PopulateFacultyDropDownListAsync(facultyId);
 
             var sortedStudents = await GetFilteredAndSortedStudentsAsync(searchString, facultyId, sortOrder);
-
-            // 4. LINQ Pagination (Skip & Take qua PaginatedList)
             var paginatedStudents = PaginatedList<Student>.Create(sortedStudents, currentPageNumber, currentPageSize);
+
+            if (Request.IsAjaxRequest())
+            {
+                return PartialView("_StudentTablePartial", paginatedStudents);
+            }
+
             return View(paginatedStudents);
         }
 
+        // =======================================================
+        // 1A. EXPORT EXCEL
+        // =======================================================
         [HttpGet]
-        [Authorize(Roles = "Admin,GiangVien")]
+        [Authorize(Policy = SystemPermissions.Student.ExportExcel)]
         public async Task<IActionResult> ExportExcel(string? searchString, string? facultyId, string? sortOrder)
         {
             var students = await GetFilteredAndSortedStudentsAsync(searchString, facultyId, sortOrder);
@@ -58,12 +66,10 @@ namespace DemoMVC.Controllers
             using var workbook = new XLWorkbook();
             var worksheet = workbook.Worksheets.Add("DanhSachSinhVien");
 
-            // Hàng tiêu đề gồm 6 cột
             var headers = new[] { "STT", "Mã Sinh Viên", "Họ và Tên", "Số Điện Thoại", "Mã Khoa", "Tên Khoa" };
             for (var column = 0; column < headers.Length; column++)
             {
-                var cell = worksheet.Cell(1, column + 1);
-                cell.Value = headers[column];
+                worksheet.Cell(1, column + 1).Value = headers[column];
             }
 
             var headerRange = worksheet.Range(1, 1, 1, headers.Length);
@@ -71,7 +77,6 @@ namespace DemoMVC.Controllers
             headerRange.Style.Fill.BackgroundColor = XLColor.LightSteelBlue;
             headerRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
 
-            // Đổ dữ liệu sinh viên
             for (var row = 0; row < students.Count; row++)
             {
                 var student = students[row];
@@ -79,14 +84,15 @@ namespace DemoMVC.Controllers
 
                 worksheet.Cell(currentRow, 1).Value = row + 1;
                 worksheet.Cell(currentRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-                worksheet.Cell(currentRow, 2).Value = student.StudentId ?? string.Empty;
-                worksheet.Cell(currentRow, 3).Value = student.FullName ?? string.Empty;
-                worksheet.Cell(currentRow, 4).Value = student.PhoneNumber ?? string.Empty;
-                worksheet.Cell(currentRow, 5).Value = student.FacultyId ?? string.Empty;
-                worksheet.Cell(currentRow, 6).Value = student.Faculty?.FacultyName ?? "Chưa phân khoa";
+                worksheet.Cell(currentRow, 2).Style.NumberFormat.Format = "@";
+                worksheet.Cell(currentRow, 2).SetValue(student.StudentId ?? string.Empty);
+                worksheet.Cell(currentRow, 3).SetValue(student.FullName ?? string.Empty);
+                worksheet.Cell(currentRow, 4).Style.NumberFormat.Format = "@";
+                worksheet.Cell(currentRow, 4).SetValue(student.PhoneNumber ?? string.Empty);
+                worksheet.Cell(currentRow, 5).SetValue(student.FacultyId ?? string.Empty);
+                worksheet.Cell(currentRow, 6).SetValue(student.Faculty?.FacultyName ?? "Chưa phân khoa");
             }
 
-            // Kẻ khung viền cho toàn bộ vùng bảng dữ liệu
             int lastRow = Math.Max(1, students.Count + 1);
             var tableRange = worksheet.Range(1, 1, lastRow, headers.Length);
             tableRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
@@ -103,24 +109,165 @@ namespace DemoMVC.Controllers
         }
 
         // =======================================================
-        // 1B. IMPORT EXCEL & TẢI FILE MẪU 100 SINH VIÊN HUMG
+        // 1B. IMPORT EXCEL (2 BƯỚC: XEM TRƯỚC & XÁC NHẬN GHI ĐÈ / GHI BỔ SUNG)
         // =======================================================
+        [HttpGet]
+        [Authorize(Policy = SystemPermissions.Student.ImportExcel)]
+        public IActionResult ImportExcel()
+        {
+            if (Request.IsAjaxRequest())
+            {
+                return PartialView("_ImportExcelModal");
+            }
+            return RedirectToAction(nameof(Index));
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = "Admin,GiangVien")]
-        public async Task<IActionResult> ImportExcel(IFormFile? excelFile)
+        [Authorize(Policy = SystemPermissions.Student.ImportExcel)]
+        public async Task<IActionResult> PreviewImportExcel(IFormFile? excelFile)
         {
+            var (preview, _) = await ParseStudentsExcelAsync(excelFile);
+            return Json(preview);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Policy = SystemPermissions.Student.ImportExcel)]
+        public async Task<IActionResult> ImportExcel(IFormFile? excelFile, string? importMode)
+        {
+            var normalizedMode = importMode?.Trim().ToLowerInvariant();
+            if (normalizedMode != "append" && normalizedMode != "overwrite")
+            {
+                const string modeError = "Vui lòng chọn chế độ nhập dữ liệu: 'Chỉ ghi bổ sung' hoặc 'Ghi đè dữ liệu trùng & thêm mới'.";
+                if (Request.IsAjaxRequest())
+                {
+                    return Json(new { success = false, message = modeError });
+                }
+                TempData["ErrorMessage"] = modeError;
+                return RedirectToAction(nameof(Index));
+            }
+
+            var (preview, parsedRows) = await ParseStudentsExcelAsync(excelFile);
+            if (!preview.Success)
+            {
+                if (Request.IsAjaxRequest())
+                {
+                    return Json(new { success = false, message = preview.ErrorMessage });
+                }
+                TempData["ErrorMessage"] = preview.ErrorMessage;
+                return RedirectToAction(nameof(Index));
+            }
+
+            if (parsedRows.Count == 0)
+            {
+                const string emptyMsg = "Không có dòng dữ liệu hợp lệ nào để nhập vào hệ thống.";
+                if (Request.IsAjaxRequest())
+                {
+                    return Json(new { success = false, message = emptyMsg });
+                }
+                TempData["ErrorMessage"] = emptyMsg;
+                return RedirectToAction(nameof(Index));
+            }
+
+            try
+            {
+                var existingStudents = await _context.Student.ToDictionaryAsync(
+                    s => s.StudentId!,
+                    s => s,
+                    StringComparer.OrdinalIgnoreCase);
+
+                int addedCount = 0;
+                int updatedCount = 0;
+                int skippedDuplicateCount = 0;
+
+                foreach (var row in parsedRows)
+                {
+                    if (!existingStudents.TryGetValue(row.StudentId, out var existing))
+                    {
+                        var newStudent = new Student
+                        {
+                            StudentId = row.StudentId,
+                            FullName = row.FullName,
+                            PhoneNumber = row.PhoneNumber,
+                            FacultyId = row.FacultyId
+                        };
+                        _context.Student.Add(newStudent);
+                        existingStudents[row.StudentId] = newStudent;
+                        addedCount++;
+                    }
+                    else if (normalizedMode == "overwrite")
+                    {
+                        existing.FullName = row.FullName;
+                        existing.PhoneNumber = row.PhoneNumber;
+                        existing.FacultyId = row.FacultyId;
+                        updatedCount++;
+                    }
+                    else
+                    {
+                        skippedDuplicateCount++;
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+
+                var modeLabel = normalizedMode == "overwrite" ? "Ghi đè & thêm mới" : "Chỉ ghi bổ sung";
+                var detailParts = new List<string> { $"Thêm mới {addedCount} sinh viên" };
+                if (normalizedMode == "overwrite")
+                {
+                    detailParts.Add($"Ghi đè cập nhật {updatedCount} sinh viên trùng mã");
+                }
+                else
+                {
+                    detailParts.Add($"Giữ nguyên/bỏ qua {skippedDuplicateCount} sinh viên trùng mã");
+                }
+                if (preview.ErrorCount > 0)
+                {
+                    detailParts.Add($"Bỏ qua {preview.ErrorCount} dòng không hợp lệ");
+                }
+
+                var message = $"Nhập Excel ({modeLabel}) thành công: {string.Join(", ", detailParts)}.";
+
+                if (Request.IsAjaxRequest())
+                {
+                    return Json(new { success = true, message });
+                }
+
+                TempData["SuccessMessage"] = message;
+                return RedirectToAction(nameof(Index));
+            }
+            catch (Exception ex)
+            {
+                var errMsg = $"Lỗi khi lưu dữ liệu Excel: {ex.Message}";
+                if (Request.IsAjaxRequest())
+                {
+                    return Json(new { success = false, message = errMsg });
+                }
+                TempData["ErrorMessage"] = errMsg;
+                return RedirectToAction(nameof(Index));
+            }
+        }
+
+        private sealed record ParsedStudentRow(string StudentId, string FullName, string PhoneNumber, string FacultyId);
+
+        private async Task<(ExcelImportPreviewVM Preview, List<ParsedStudentRow> ValidRows)> ParseStudentsExcelAsync(IFormFile? excelFile)
+        {
+            var preview = new ExcelImportPreviewVM();
+            var validRows = new List<ParsedStudentRow>();
+
             if (excelFile == null || excelFile.Length == 0)
             {
-                TempData["ErrorMessage"] = "Vui lòng chọn một file Excel (.xlsx) để tải lên.";
-                return RedirectToAction(nameof(Index));
+                preview.Success = false;
+                preview.ErrorMessage = "Vui lòng chọn một file Excel (.xlsx) để tải lên.";
+                return (preview, validRows);
             }
 
             var extension = Path.GetExtension(excelFile.FileName);
             if (!string.Equals(extension, ".xlsx", StringComparison.OrdinalIgnoreCase))
             {
-                TempData["ErrorMessage"] = "Định dạng file không hợp lệ. Hệ thống chỉ hỗ trợ file Excel (.xlsx).";
-                return RedirectToAction(nameof(Index));
+                preview.Success = false;
+                preview.ErrorMessage = "Định dạng file không hợp lệ. Hệ thống chỉ hỗ trợ file Excel (.xlsx).";
+                return (preview, validRows);
             }
 
             try
@@ -130,70 +277,95 @@ namespace DemoMVC.Controllers
                 var facultyByCode = faculties.ToDictionary(f => f.FacultyCode, f => f.FacultyId);
                 var facultyByName = faculties.ToDictionary(f => f.FacultyName.Trim(), f => f.FacultyId, StringComparer.OrdinalIgnoreCase);
 
-                var existingStudents = await _context.Student.ToDictionaryAsync(
-                    s => s.StudentId!,
-                    s => s,
-                    StringComparer.OrdinalIgnoreCase);
+                var existingStudentIds = (await _context.Student
+                    .AsNoTracking()
+                    .Where(s => s.StudentId != null)
+                    .Select(s => s.StudentId!)
+                    .ToListAsync())
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-                int addedCount = 0;
-                int updatedCount = 0;
-                int skippedCount = 0;
-                bool canUpdate = User.IsInRole("Admin") || User.IsInRole("GiangVien");
+                var seenIdsInFile = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
                 using var stream = new MemoryStream();
                 await excelFile.CopyToAsync(stream);
                 stream.Position = 0;
 
                 using var workbook = new XLWorkbook(stream);
+                if (!workbook.Worksheets.Any())
+                {
+                    preview.Success = false;
+                    preview.ErrorMessage = "File Excel không có trang tính (worksheet) nào.";
+                    return (preview, validRows);
+                }
+
                 var worksheet = workbook.Worksheet(1);
                 var rows = worksheet.RowsUsed().Skip(1);
 
                 foreach (var row in rows)
                 {
-                    var col1 = row.Cell(1).GetString().Trim();
+                    int rowNumber = row.RowNumber();
+                    var col1 = row.Cell(1).GetFormattedString().Trim();
+                    var col2 = row.Cell(2).GetFormattedString().Trim();
+                    var col3 = row.Cell(3).GetFormattedString().Trim();
+                    var col4 = row.Cell(4).GetFormattedString().Trim();
+                    var col5 = row.Cell(5).GetFormattedString().Trim();
+
+                    if (string.IsNullOrWhiteSpace(col1) && string.IsNullOrWhiteSpace(col2) &&
+                        string.IsNullOrWhiteSpace(col3) && string.IsNullOrWhiteSpace(col4))
+                    {
+                        continue;
+                    }
+
+                    preview.TotalDataRows++;
+
                     string studentId;
                     string fullName;
-                    string phoneNumber;
+                    string rawPhone;
                     string rawFaculty;
 
-                    // Hỗ trợ linh hoạt cấu trúc 6 cột (STT ở cột 1 < 6 ký tự) và 4 cột
-                    if (col1.Length < 6)
+                    // Hỗ trợ cấu trúc 6 cột (STT ở cột 1 < 6 ký tự) và 4 cột
+                    if (col1.Length < 6 && !string.IsNullOrWhiteSpace(col2))
                     {
-                        studentId = row.Cell(2).GetString().Trim();
-                        fullName = row.Cell(3).GetString().Trim();
-                        phoneNumber = row.Cell(4).GetString().Trim();
-                        rawFaculty = row.Cell(5).GetString().Trim();
+                        studentId = col2;
+                        fullName = col3;
+                        rawPhone = col4;
+                        rawFaculty = col5;
                     }
                     else
                     {
                         studentId = col1;
-                        fullName = row.Cell(2).GetString().Trim();
-                        phoneNumber = row.Cell(3).GetString().Trim();
-                        rawFaculty = row.Cell(4).GetString().Trim();
+                        fullName = col2;
+                        rawPhone = col3;
+                        rawFaculty = col4;
                     }
 
-                    if (string.IsNullOrWhiteSpace(studentId) || string.IsNullOrWhiteSpace(fullName))
+                    // Kiểm tra Mã SV
+                    if (string.IsNullOrWhiteSpace(studentId) || studentId.Length < 2 || studentId.Length > 20 || studentId.Any(char.IsWhiteSpace))
                     {
-                        skippedCount++;
+                        AddSampleError(preview, $"Dòng {rowNumber}: Mã sinh viên '{studentId}' không hợp lệ (2–20 ký tự, không khoảng trắng).");
                         continue;
                     }
 
-                    // Nếu cột 3/4 lại là tên Khoa hoặc mã Khoa (VD: file Excel chỉ có 3 cột: Mã SV | Họ tên | Khoa)
-                    if (string.IsNullOrWhiteSpace(rawFaculty) && !string.IsNullOrWhiteSpace(phoneNumber) && !phoneNumber.All(char.IsDigit))
+                    // Kiểm tra Họ và tên
+                    if (string.IsNullOrWhiteSpace(fullName) || fullName.Length > 100)
                     {
-                        rawFaculty = phoneNumber;
-                        phoneNumber = string.Empty;
+                        AddSampleError(preview, $"Dòng {rowNumber}: Họ và tên không được để trống và tối đa 100 ký tự.");
+                        continue;
                     }
 
-                    // Chỉ giữ lại ký tự chữ số cho Số điện thoại
-                    var digitsOnly = new string(phoneNumber.Where(char.IsDigit).ToArray());
-                    if (digitsOnly.Length == 9)
+                    // Kiểm tra Số điện thoại chặt chẽ (bắt đầu bằng 0, 10-11 chữ số; bù số 0 nếu Excel bỏ số 0 đầu của số 9 chữ số)
+                    var cleanedPhone = rawPhone.Replace(" ", "").Replace("-", "").Replace(".", "");
+                    if (cleanedPhone.Length == 9 && cleanedPhone.All(char.IsDigit))
                     {
-                        digitsOnly = "0" + digitsOnly;
+                        cleanedPhone = "0" + cleanedPhone;
                     }
-                    phoneNumber = PhoneRegex.IsMatch(digitsOnly) ? digitsOnly : GenerateDefaultPhoneNumber(studentId);
+                    if (!PhoneRegex.IsMatch(cleanedPhone))
+                    {
+                        AddSampleError(preview, $"Dòng {rowNumber} (Mã SV {studentId}): SĐT '{rawPhone}' không hợp lệ (phải là 10–11 chữ số bắt đầu bằng 0).");
+                        continue;
+                    }
 
-                    // Chuẩn hóa và kiểm tra khóa ngoại FacultyId
+                    // Kiểm tra và ánh xạ FacultyId tồn tại trong DB
                     string? resolvedFacultyId = null;
                     if (!string.IsNullOrWhiteSpace(rawFaculty))
                     {
@@ -218,8 +390,8 @@ namespace DemoMVC.Controllers
                         }
                     }
 
-                    // Nếu để trống cột Khoa hoặc chưa ánh xạ được, suy ra từ 2 chữ số mã ngành ở vị trí thứ 5-6 của StudentId 10 số
-                    if (string.IsNullOrEmpty(resolvedFacultyId) && studentId.Length == 10 && StudentIdRegex.IsMatch(studentId))
+                    // Nếu cột Khoa trống, thử suy ra từ mã ngành trong StudentId 10 chữ số
+                    if (string.IsNullOrEmpty(resolvedFacultyId) && string.IsNullOrWhiteSpace(rawFaculty) && StudentIdRegex.IsMatch(studentId))
                     {
                         var majorCode = studentId.Substring(4, 2);
                         if (facultyByCode.TryGetValue(majorCode, out var matchedFromId))
@@ -234,55 +406,60 @@ namespace DemoMVC.Controllers
 
                     if (string.IsNullOrEmpty(resolvedFacultyId))
                     {
-                        skippedCount++;
+                        AddSampleError(preview, $"Dòng {rowNumber} (Mã SV {studentId}): Khoa '{rawFaculty}' không tồn tại trong hệ thống.");
                         continue;
                     }
 
-                    // Xử lý chống trùng khóa chính (StudentId)
-                    if (!existingStudents.TryGetValue(studentId, out var existingStudent))
+                    // Kiểm tra trùng lặp ngay trong cùng file Excel
+                    if (!seenIdsInFile.Add(studentId))
                     {
-                        var newStudent = new Student
-                        {
-                            StudentId = studentId,
-                            FullName = fullName,
-                            PhoneNumber = phoneNumber,
-                            FacultyId = resolvedFacultyId
-                        };
-                        _context.Student.Add(newStudent);
-                        existingStudents[studentId] = newStudent;
-                        addedCount++;
+                        AddSampleError(preview, $"Dòng {rowNumber}: Mã sinh viên '{studentId}' bị trùng lặp ngay trong file Excel.");
+                        continue;
                     }
-                    else if (canUpdate)
+
+                    validRows.Add(new ParsedStudentRow(studentId, fullName, cleanedPhone, resolvedFacultyId));
+                    preview.ValidRows++;
+
+                    if (existingStudentIds.Contains(studentId))
                     {
-                        existingStudent.FullName = fullName;
-                        existingStudent.PhoneNumber = phoneNumber;
-                        existingStudent.FacultyId = resolvedFacultyId;
-                        updatedCount++;
+                        preview.DuplicateCount++;
+                        if (preview.SampleDuplicateIds.Count < 10)
+                        {
+                            preview.SampleDuplicateIds.Add($"{studentId} ({fullName})");
+                        }
                     }
                     else
                     {
-                        skippedCount++;
+                        preview.NewCount++;
                     }
                 }
 
-                await _context.SaveChangesAsync();
-                TempData["SuccessMessage"] = $"Nhập Excel thành công: Thêm mới {addedCount} sinh viên, cập nhật {updatedCount} sinh viên (bỏ qua {skippedCount} dòng không hợp lệ).";
+                preview.Success = true;
             }
             catch (Exception ex)
             {
-                TempData["ErrorMessage"] = $"Lỗi khi đọc file Excel: {ex.Message}";
+                preview.Success = false;
+                preview.ErrorMessage = $"Không thể đọc file Excel: {ex.Message}";
             }
 
-            return RedirectToAction(nameof(Index));
+            return (preview, validRows);
+        }
+
+        private static void AddSampleError(ExcelImportPreviewVM preview, string message)
+        {
+            preview.ErrorCount++;
+            if (preview.SampleErrors.Count < 10)
+            {
+                preview.SampleErrors.Add(message);
+            }
         }
 
         [HttpGet]
-        [Authorize(Roles = "Admin,GiangVien")]
+        [Authorize(Policy = SystemPermissions.Student.ImportExcel)]
         public async Task<IActionResult> DownloadSampleExcel()
         {
             using var workbook = await BuildSample100StudentsWorkbookAsync(_context);
 
-            // Lưu sẵn 1 bản vật lý tại thư mục gốc của project
             var physicalFilePath = Path.Combine(Directory.GetCurrentDirectory(), "DanhSach_100_SinhVien_HUMG.xlsx");
             workbook.SaveAs(physicalFilePath);
 
@@ -373,8 +550,10 @@ namespace DemoMVC.Controllers
                 int currentRow = i + 2;
                 worksheet.Cell(currentRow, 1).Value = i + 1;
                 worksheet.Cell(currentRow, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                worksheet.Cell(currentRow, 2).Style.NumberFormat.Format = "@";
                 worksheet.Cell(currentRow, 2).SetValue(studentId);
                 worksheet.Cell(currentRow, 3).SetValue(fullName);
+                worksheet.Cell(currentRow, 4).Style.NumberFormat.Format = "@";
                 worksheet.Cell(currentRow, 4).SetValue(phoneNumber);
                 worksheet.Cell(currentRow, 5).SetValue(faculty.FacultyId);
                 worksheet.Cell(currentRow, 6).SetValue(faculty.FacultyName);
@@ -444,11 +623,10 @@ namespace DemoMVC.Controllers
         }
 
         // =======================================================
-        // 2. DETAILS (Xem chi tiết với LINQ & Include)
+        // 2. DETAILS
         // =======================================================
-        // GET: /Student/Details/{id}
         [HttpGet]
-        [Authorize(Roles = "Admin,GiangVien,SinhVien")]
+        [Authorize(Policy = SystemPermissions.Student.Details)]
         public async Task<IActionResult> Details(string? id)
         {
             if (string.IsNullOrWhiteSpace(id)) return NotFound();
@@ -460,15 +638,19 @@ namespace DemoMVC.Controllers
 
             if (student == null) return NotFound();
 
+            if (Request.IsAjaxRequest())
+            {
+                return PartialView("_DetailsModal", student);
+            }
+
             return View(student);
         }
 
         // =======================================================
         // 3. API SINH MÃ TỰ ĐỘNG THEO KHOA
         // =======================================================
-        // GET: /Student/GetNextStudentId?facultyId=CNTT
         [HttpGet]
-        [Authorize(Roles = "Admin,GiangVien")]
+        [Authorize(Policy = SystemPermissions.Student.Create)]
         public async Task<IActionResult> GetNextStudentId(string? facultyId)
         {
             if (string.IsNullOrEmpty(facultyId))
@@ -485,21 +667,23 @@ namespace DemoMVC.Controllers
         }
 
         // =======================================================
-        // 4. CREATE (Thêm mới kèm Dropdown Khoa & Tự động sinh mã)
+        // 4. CREATE
         // =======================================================
-        // GET: /Student/Create
         [HttpGet]
-        [Authorize(Roles = "Admin,GiangVien")]
+        [Authorize(Policy = SystemPermissions.Student.Create)]
         public async Task<IActionResult> Create()
         {
             await PopulateFacultyDropDownListAsync();
+            if (Request.IsAjaxRequest())
+            {
+                return PartialView("_CreateModal", new Student());
+            }
             return View();
         }
 
-        // POST: /Student/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = "Admin,GiangVien")]
+        [Authorize(Policy = SystemPermissions.Student.Create)]
         public async Task<IActionResult> Create([Bind("StudentId,FullName,FacultyId,PhoneNumber")] Student student)
         {
             student.StudentId = student.StudentId?.Trim();
@@ -516,7 +700,6 @@ namespace DemoMVC.Controllers
 
             if (string.IsNullOrEmpty(student.StudentId))
             {
-                // Không tự nhập => tự động sinh mã theo khoa đã chọn
                 if (!string.IsNullOrEmpty(student.FacultyId))
                 {
                     student.StudentId = await GenerateStudentIdAsync(student.FacultyId);
@@ -532,16 +715,13 @@ namespace DemoMVC.Controllers
             }
             else
             {
-                // Tự nhập => xác định khoa theo mã ngành (01-09) trong mã sinh viên
                 string majorCode;
                 if (student.StudentId.Length >= 4 && student.StudentId[2] == '0' && await _context.Faculty.AnyAsync(f => f.FacultyCode == student.StudentId.Substring(2, 2)))
                 {
-                    // Dạng rút gọn [Năm 2 số][Ngành 2 số: 01-09]...
                     majorCode = student.StudentId.Substring(2, 2);
                 }
                 else
                 {
-                    // Dạng chuẩn 10 số HUMG [Năm 2 số][Hệ 21][Ngành 2 số: 01-09][STT 4 số]
                     majorCode = student.StudentId.Substring(4, 2);
                 }
 
@@ -557,7 +737,6 @@ namespace DemoMVC.Controllers
                 }
             }
 
-            // Kiểm tra trùng Mã sinh viên
             if (!string.IsNullOrEmpty(student.StudentId) && await StudentExistsAsync(student.StudentId))
             {
                 ModelState.AddModelError(nameof(Student.StudentId), "Mã sinh viên đã tồn tại trong hệ thống");
@@ -567,20 +746,30 @@ namespace DemoMVC.Controllers
             {
                 _context.Add(student);
                 await _context.SaveChangesAsync();
-                TempData["SuccessMessage"] = $"Đã thêm sinh viên '{student.FullName}' (Mã SV: {student.StudentId}) thành công.";
+                var successMsg = $"Đã thêm sinh viên '{student.FullName}' (Mã SV: {student.StudentId}) thành công.";
+
+                if (Request.IsAjaxRequest())
+                {
+                    return Json(new { success = true, message = successMsg });
+                }
+
+                TempData["SuccessMessage"] = successMsg;
                 return RedirectToAction(nameof(Index));
             }
 
             await PopulateFacultyDropDownListAsync(student.FacultyId);
+            if (Request.IsAjaxRequest())
+            {
+                return PartialView("_CreateModal", student);
+            }
             return View(student);
         }
 
         // =======================================================
-        // 5. UPDATE (Chỉnh sửa)
+        // 5. UPDATE
         // =======================================================
-        // GET: /Student/Edit/{id}
         [HttpGet]
-        [Authorize(Roles = "Admin,GiangVien")]
+        [Authorize(Policy = SystemPermissions.Student.Edit)]
         public async Task<IActionResult> Edit(string? id)
         {
             if (string.IsNullOrWhiteSpace(id)) return NotFound();
@@ -589,13 +778,16 @@ namespace DemoMVC.Controllers
             if (student == null) return NotFound();
 
             await PopulateFacultyDropDownListAsync(student.FacultyId);
+            if (Request.IsAjaxRequest())
+            {
+                return PartialView("_EditModal", student);
+            }
             return View(student);
         }
 
-        // POST: /Student/Edit/{id}
         [HttpPost]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = "Admin,GiangVien")]
+        [Authorize(Policy = SystemPermissions.Student.Edit)]
         public async Task<IActionResult> Edit(string id, [Bind("StudentId,FullName,FacultyId,PhoneNumber")] Student student)
         {
             if (id != student.StudentId) return NotFound();
@@ -611,7 +803,6 @@ namespace DemoMVC.Controllers
                 ModelState.AddModelError(nameof(Student.PhoneNumber), "SĐT chỉ được nhập chữ số, bắt đầu bằng 0 và gồm 10-11 số");
             }
 
-            // Mã 10 số: khoa được chọn phải khớp với 2 số ngành trong mã
             if (StudentIdRegex.IsMatch(id) && !string.IsNullOrEmpty(student.FacultyId))
             {
                 var faculty = await _context.Faculty.AsNoTracking().FirstOrDefaultAsync(f => f.FacultyId == student.FacultyId);
@@ -635,7 +826,14 @@ namespace DemoMVC.Controllers
                 {
                     _context.Update(student);
                     await _context.SaveChangesAsync();
-                    TempData["SuccessMessage"] = $"Đã cập nhật thông tin sinh viên '{student.FullName}' (Mã SV: {student.StudentId}).";
+                    var successMsg = $"Đã cập nhật thông tin sinh viên '{student.FullName}' (Mã SV: {student.StudentId}).";
+
+                    if (Request.IsAjaxRequest())
+                    {
+                        return Json(new { success = true, message = successMsg });
+                    }
+
+                    TempData["SuccessMessage"] = successMsg;
                 }
                 catch (DbUpdateConcurrencyException)
                 {
@@ -646,15 +844,18 @@ namespace DemoMVC.Controllers
             }
 
             await PopulateFacultyDropDownListAsync(student.FacultyId);
+            if (Request.IsAjaxRequest())
+            {
+                return PartialView("_EditModal", student);
+            }
             return View(student);
         }
 
         // =======================================================
-        // 6. DELETE (Xóa)
+        // 6. DELETE
         // =======================================================
-        // GET: /Student/Delete/{id}
         [HttpGet]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Policy = SystemPermissions.Student.Delete)]
         public async Task<IActionResult> Delete(string? id)
         {
             if (string.IsNullOrWhiteSpace(id)) return NotFound();
@@ -666,35 +867,49 @@ namespace DemoMVC.Controllers
 
             if (student == null) return NotFound();
 
+            if (Request.IsAjaxRequest())
+            {
+                return PartialView("_DeleteModal", student);
+            }
             return View(student);
         }
 
-        // POST: /Student/Delete/{id}
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Policy = SystemPermissions.Student.Delete)]
         public async Task<IActionResult> DeleteConfirmed(string id)
         {
             var student = await _context.Student.FindAsync(id);
-            if (student != null)
+            if (student == null)
             {
-                _context.Student.Remove(student);
-                await _context.SaveChangesAsync();
-                TempData["SuccessMessage"] = $"Đã xóa sinh viên '{student.FullName}' (Mã SV: {student.StudentId}) khỏi hệ thống.";
+                if (Request.IsAjaxRequest())
+                {
+                    return Json(new { success = false, message = "Không tìm thấy sinh viên cần xóa." });
+                }
+                return RedirectToAction(nameof(Index));
             }
+
+            _context.Student.Remove(student);
+            await _context.SaveChangesAsync();
+            var successMsg = $"Đã xóa sinh viên '{student.FullName}' (Mã SV: {student.StudentId}) khỏi hệ thống.";
+
+            if (Request.IsAjaxRequest())
+            {
+                return Json(new { success = true, message = successMsg });
+            }
+
+            TempData["SuccessMessage"] = successMsg;
             return RedirectToAction(nameof(Index));
         }
 
         // =======================================================
         // HÀM HỖ TRỢ NGHIỆP VỤ (HELPER METHODS)
         // =======================================================
-
-        // Mã SV chuẩn: 10 chữ số = [Năm 2 số][Hệ 2 số][Ngành 2 số][STT 4 số]
         private static readonly Regex StudentIdRegex = new(@"^\d{10}$", RegexOptions.Compiled);
         private static readonly Regex PhoneRegex = new(@"^0\d{9,10}$", RegexOptions.Compiled);
         private static readonly string[] DefaultPhonePrefixes = { "091", "094", "096", "097", "098", "032", "033", "034", "035", "036", "037", "038", "039", "086", "090", "093" };
-        private const string DefaultYear = "21";   // Dùng khi khoa chưa có sinh viên nào
-        private const string DefaultSystem = "21"; // Hệ Đại học chính quy
+        private const string DefaultYear = "21";
+        private const string DefaultSystem = "21";
 
         public static string GenerateDefaultPhoneNumber(string? seed)
         {
@@ -736,10 +951,6 @@ namespace DemoMVC.Controllers
             }
         }
 
-        // Sinh mã tự động:
-        // - Khoa đã có SV (VD: 2221050629) => giữ nguyên 6 số đầu "222105", STT + 1 => 2221050630
-        // - Có nhiều tiền tố (VD: 2221050629 và 2821050743) => lấy mã lớn nhất (khóa mới nhất) => 2821050744
-        // - Khoa chưa có SV => 21 + 21 + [mã ngành] + 0001
         private async Task<string> GenerateStudentIdAsync(string facultyId)
         {
             var faculty = await _context.Faculty.AsNoTracking().FirstOrDefaultAsync(f => f.FacultyId == facultyId);
@@ -751,7 +962,6 @@ namespace DemoMVC.Controllers
                 .ToListAsync())
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-            // Tìm mã sinh viên mới nhất của khoa (10 số, chứa đúng mã ngành của khoa)
             var latest = existingIds
                 .Where(id => StudentIdRegex.IsMatch(id) &&
                             (id.Substring(4, 2) == faculty.FacultyCode ||
@@ -765,7 +975,6 @@ namespace DemoMVC.Controllers
             {
                 if (latest[2] == '0' && latest.Substring(2, 2) == faculty.FacultyCode)
                 {
-                    // Dạng rút gọn [Năm 2 số][Ngành 2 số][STT 6 số]
                     prefix = latest.Substring(0, 4);
                     next = int.Parse(latest.Substring(4)) + 1;
                     while (next <= 999999 && existingIds.Contains($"{prefix}{next:D6}")) next++;
@@ -773,14 +982,12 @@ namespace DemoMVC.Controllers
                 }
                 else
                 {
-                    // Dạng chuẩn 10 số HUMG: giữ nguyên 6 số đầu [Năm 2 số][Hệ 21][Ngành 2 số], tăng STT 4 số cuối thêm 1
                     prefix = latest.Substring(0, 6);
                     next = int.Parse(latest.Substring(6)) + 1;
                 }
             }
             else
             {
-                // Khoa chưa có sinh viên nào => mặc định: 21 + 21 + [mã ngành] + 0001
                 prefix = $"{DefaultYear}{DefaultSystem}{faculty.FacultyCode}";
                 next = 1;
             }
@@ -789,7 +996,6 @@ namespace DemoMVC.Controllers
             return next > 9999 ? string.Empty : $"{prefix}{next:D4}";
         }
 
-        // Đổ danh sách Khoa vào SelectList (hiển thị "05 · Công nghệ thông tin") và danh sách thô cho JavaScript
         private async Task PopulateFacultyDropDownListAsync(object? selectedFaculty = null)
         {
             var faculties = await _context.Faculty

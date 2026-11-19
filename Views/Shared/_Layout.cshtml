@@ -1,6 +1,13 @@
+@inject IAuthorizationService AuthorizationService
 @{
     var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? string.Empty;
     var currentAction = ViewContext.RouteData.Values["action"]?.ToString() ?? string.Empty;
+
+    bool isAuthenticated = User.Identity?.IsAuthenticated == true;
+    bool canViewStudents = isAuthenticated && (await AuthorizationService.AuthorizeAsync(User, SystemPermissions.Student.Index)).Succeeded;
+    bool canViewFaculties = isAuthenticated && (await AuthorizationService.AuthorizeAsync(User, SystemPermissions.Faculty.Index)).Succeeded;
+    bool canViewAccounts = isAuthenticated && (await AuthorizationService.AuthorizeAsync(User, SystemPermissions.Account.Index)).Succeeded;
+    bool canViewRoles = isAuthenticated && (await AuthorizationService.AuthorizeAsync(User, SystemPermissions.Role.Index)).Succeeded;
 }
 <!DOCTYPE html>
 <html lang="vi">
@@ -21,7 +28,7 @@
 
     <!-- 1. Base CSS: site.css -->
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <!-- 2. Custom Styles: custom.css (Tách riêng để quản lý giao diện, màu sắc, components) -->
+    <!-- 2. Custom Styles: custom.css -->
     <link rel="stylesheet" href="~/css/custom.css" asp-append-version="true" />
 </head>
 <body>
@@ -44,39 +51,38 @@
                                 <i class="bi bi-house-door"></i> Trang chủ
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link @(currentController == "Student" ? "active" : "")" asp-controller="Student" asp-action="Index">
-                                <i class="bi bi-people-fill"></i> Quản lý Sinh viên
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link @(currentController == "Faculty" ? "active" : "")" asp-controller="Faculty" asp-action="Index">
-                                <i class="bi bi-building"></i> Quản lý Khoa
-                            </a>
-                        </li>
-                        @if (User.IsInRole("Admin"))
+                        @if (canViewStudents)
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link @(currentController == "Student" ? "active" : "")" asp-controller="Student" asp-action="Index">
+                                    <i class="bi bi-people-fill"></i> Quản lý Sinh viên
+                                </a>
+                            </li>
+                        }
+                        @if (canViewFaculties)
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link @(currentController == "Faculty" ? "active" : "")" asp-controller="Faculty" asp-action="Index">
+                                    <i class="bi bi-building"></i> Quản lý Khoa
+                                </a>
+                            </li>
+                        }
+                        @if (canViewAccounts)
                         {
                             <li class="nav-item">
                                 <a class="nav-link @(currentController == "Account" ? "active" : "")" asp-controller="Account" asp-action="Index">
                                     <i class="bi bi-person-gear text-danger"></i> Quản lý Tài khoản
                                 </a>
                             </li>
+                        }
+                        @if (canViewRoles)
+                        {
                             <li class="nav-item">
                                 <a class="nav-link @(currentController == "Role" ? "active" : "")" asp-controller="Role" asp-action="Index">
                                     <i class="bi bi-shield-lock text-danger"></i> Quản lý Role
                                 </a>
                             </li>
                         }
-                        <li class="nav-item">
-                            <a class="nav-link @(currentController == "Demo" ? "active" : "")" asp-controller="Demo" asp-action="Index">
-                                <i class="bi bi-layers"></i> Demo
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link @(currentController == "Home" && currentAction == "Privacy" ? "active" : "")" asp-controller="Home" asp-action="Privacy">
-                                <i class="bi bi-shield-check"></i> Privacy
-                            </a>
-                        </li>
                     </ul>
                     <div class="d-flex align-items-center gap-3">
                         <partial name="_LoginPartial" />
@@ -86,10 +92,22 @@
         </nav>
     </header>
 
+    <!-- Toast Notification Container (dùng cho phản hồi AJAX CRUD) -->
+    <div class="toast-container position-fixed top-0 end-0 p-3" id="appToastContainer" style="z-index: 1090;"></div>
+
     <!-- Main Content Container -->
     <main role="main" class="container py-4">
         @RenderBody()
     </main>
+
+    <!-- Shared Bootstrap 5 CRUD Modal (dùng chung cho Student, Faculty, Role, Account & Import Excel) -->
+    <div class="modal fade" id="crudModal" tabindex="-1" aria-labelledby="crudModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" id="crudModalDialog">
+            <div class="modal-content border-0 shadow-lg rounded-3" id="crudModalContent">
+                <!-- PartialView sẽ được nạp động qua AJAX -->
+            </div>
+        </div>
+    </div>
 
     <!-- Footer -->
     <footer class="main-footer">
@@ -110,10 +128,11 @@
         </div>
     </footer>
 
-    <!-- JavaScript Bundle (jQuery + Bootstrap 5 Bundle JS + site.js) -->
+    <!-- JavaScript Bundle (jQuery + Bootstrap 5 Bundle JS + site.js + crud-modal.js) -->
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/crud-modal.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

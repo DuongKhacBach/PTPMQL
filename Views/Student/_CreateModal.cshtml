@@ -1,0 +1,101 @@
+@model DemoMVC.Models.Student
+@{
+    var faculties = ViewBag.Faculties as IEnumerable<DemoMVC.Models.Faculty> ?? Enumerable.Empty<DemoMVC.Models.Faculty>();
+}
+
+<div class="modal-header bg-primary text-white">
+    <h5 class="modal-title fw-bold" id="crudModalLabel">
+        <i class="bi bi-person-plus-fill me-2"></i>Thêm mới Sinh viên
+    </h5>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Đóng"></button>
+</div>
+
+<form asp-controller="Student" asp-action="Create" method="post" data-ajax-form="true" autocomplete="off">
+    <div class="modal-body p-4">
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 small" role="alert"></div>
+        <div class="alert alert-danger py-2 small d-none" data-modal-error role="alert"></div>
+
+        <!-- Row 1: Khoa & Mã SV -->
+        <div class="row g-3 mb-3">
+            <div class="col-md-6">
+                <label asp-for="FacultyId" class="form-label fw-semibold text-dark small">Khoa</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light text-muted border-end-0">
+                        <i class="bi bi-building"></i>
+                    </span>
+                    <input type="text" id="facultyQuickInput" class="form-control text-uppercase font-monospace text-center fw-bold"
+                           style="max-width: 85px;" placeholder="05..." title="Nhập nhanh mã số (05, 01...) hoặc mã chữ (CNTT, MO...)" />
+                    <select asp-for="FacultyId" class="form-select border-start-0" id="facultySelect" required>
+                        <option value="" data-code="">-- Chọn Khoa --</option>
+                        @foreach (var f in faculties)
+                        {
+                            <option value="@f.FacultyId" data-code="@f.FacultyCode" selected="@(Model?.FacultyId == f.FacultyId ? "selected" : null)">
+                                @f.FacultyCode · @f.FacultyName
+                            </option>
+                        }
+                    </select>
+                </div>
+                <span asp-validation-for="FacultyId" class="text-danger small mt-1 d-block"></span>
+            </div>
+
+            <div class="col-md-6">
+                <label asp-for="StudentId" class="form-label fw-semibold text-dark small d-flex justify-content-between align-items-center">
+                    <span>Mã sinh viên</span>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size: 0.7rem;">
+                        Tự nhập hoặc Tự sinh
+                    </span>
+                </label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light text-muted border-end-0">
+                        <i class="bi bi-person-badge"></i>
+                    </span>
+                    <input asp-for="StudentId"
+                           class="form-control border-start-0 ps-2 font-monospace fw-bold text-primary"
+                           id="studentIdInput"
+                           data-next-id-url="@Url.Action("GetNextStudentId", "Student")"
+                           placeholder="VD: 2521051096 (10 số)..."
+                           maxlength="10" />
+                    <button type="button" class="btn btn-outline-primary btn-sm px-3" id="btnAutoGenerate" title="Tự động sinh mã tiếp theo">
+                        <i class="bi bi-magic me-1"></i> Sinh mã
+                    </button>
+                </div>
+                <span asp-validation-for="StudentId" class="text-danger small mt-1 d-block"></span>
+            </div>
+        </div>
+
+        <!-- Row 2: Họ và tên -->
+        <div class="mb-3">
+            <label asp-for="FullName" class="form-label fw-semibold text-dark small"></label>
+            <div class="input-group">
+                <span class="input-group-text bg-light text-muted border-end-0">
+                    <i class="bi bi-person"></i>
+                </span>
+                <input asp-for="FullName" class="form-control border-start-0 ps-0" placeholder="Nhập họ và tên đầy đủ..." />
+            </div>
+            <span asp-validation-for="FullName" class="text-danger small mt-1 d-block"></span>
+        </div>
+
+        <!-- Row 3: Số điện thoại -->
+        <div class="mb-2">
+            <label asp-for="PhoneNumber" class="form-label fw-semibold text-dark small"></label>
+            <div class="input-group">
+                <span class="input-group-text bg-light text-muted border-end-0">
+                    <i class="bi bi-telephone"></i>
+                </span>
+                <input asp-for="PhoneNumber" type="tel" inputmode="numeric" maxlength="11" pattern="^0\d{9,10}$"
+                       data-digits-only="true"
+                       class="form-control border-start-0 ps-0 font-monospace" placeholder="Ví dụ: 0912345678 (chỉ nhập số)" required />
+            </div>
+            <span asp-validation-for="PhoneNumber" class="text-danger small mt-1 d-block"></span>
+        </div>
+    </div>
+
+    <div class="modal-footer bg-light">
+        <button type="button" class="btn btn-outline-secondary btn-sm px-3" data-bs-dismiss="modal">
+            <i class="bi bi-x-lg me-1"></i> Hủy
+        </button>
+        <button type="submit" class="btn btn-primary btn-sm px-4">
+            <i class="bi bi-check-lg me-1"></i> Lưu sinh viên
+        </button>
+    </div>
+</form>

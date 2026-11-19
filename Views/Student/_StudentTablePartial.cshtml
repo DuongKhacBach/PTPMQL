@@ -1,0 +1,269 @@
+@model DemoMVC.Models.PaginatedList<DemoMVC.Models.Student>
+@inject IAuthorizationService AuthorizationService
+
+@{
+    var currentFilter = ViewData["CurrentFilter"] as string;
+    var currentFaculty = ViewData["CurrentFaculty"] as string;
+    var currentSort = ViewData["CurrentSort"] as string;
+    var currentPageSize = ViewData["CurrentPageSize"] is int ps ? ps : (Model?.PageSize ?? 5);
+
+    bool canDetails = (await AuthorizationService.AuthorizeAsync(User, SystemPermissions.Student.Details)).Succeeded;
+    bool canCreate = (await AuthorizationService.AuthorizeAsync(User, SystemPermissions.Student.Create)).Succeeded;
+    bool canEdit = (await AuthorizationService.AuthorizeAsync(User, SystemPermissions.Student.Edit)).Succeeded;
+    bool canDelete = (await AuthorizationService.AuthorizeAsync(User, SystemPermissions.Student.Delete)).Succeeded;
+
+    string GetSortIcon(string column)
+    {
+        return column switch
+        {
+            "id" => currentSort == "id_asc" ? "bi-sort-numeric-down text-primary" :
+                    currentSort == "id_desc" ? "bi-sort-numeric-up-alt text-primary" : "bi-arrow-down-up text-secondary opacity-50",
+            "faculty" => currentSort == "faculty_asc" ? "bi-sort-alpha-down text-primary" :
+                         currentSort == "faculty_desc" ? "bi-sort-alpha-up-alt text-primary" : "bi-arrow-down-up text-secondary opacity-50",
+            _ => string.IsNullOrEmpty(currentSort) ? "bi-sort-alpha-down text-primary" :
+                 currentSort == "name_desc" ? "bi-sort-alpha-up-alt text-primary" : "bi-arrow-down-up text-secondary opacity-50"
+        };
+    }
+}
+
+<div data-total-items="@(Model?.TotalItems ?? 0)" data-current-filter="@(currentFilter ?? string.Empty)">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+                <thead class="table-light text-muted small text-uppercase">
+                    <tr>
+                        <th class="ps-3 py-2" style="width: 170px;">
+                            <a asp-action="Index"
+                               asp-route-sortOrder="@ViewData["IdSortParm"]"
+                               asp-route-searchString="@currentFilter"
+                               asp-route-facultyId="@currentFaculty"
+                               asp-route-pageSize="@currentPageSize"
+                               data-ajax-link="true"
+                               class="text-decoration-none text-muted d-inline-flex align-items-center gap-1">
+                                Mã SV <i class="bi @GetSortIcon("id") small"></i>
+                            </a>
+                        </th>
+                        <th class="py-2">
+                            <a asp-action="Index"
+                               asp-route-sortOrder="@ViewData["NameSortParm"]"
+                               asp-route-searchString="@currentFilter"
+                               asp-route-facultyId="@currentFaculty"
+                               asp-route-pageSize="@currentPageSize"
+                               data-ajax-link="true"
+                               class="text-decoration-none text-muted d-inline-flex align-items-center gap-1">
+                                Họ và tên <i class="bi @GetSortIcon("name") small"></i>
+                            </a>
+                        </th>
+                        <th class="py-2">
+                            <a asp-action="Index"
+                               asp-route-sortOrder="@ViewData["FacultySortParm"]"
+                               asp-route-searchString="@currentFilter"
+                               asp-route-facultyId="@currentFaculty"
+                               asp-route-pageSize="@currentPageSize"
+                               data-ajax-link="true"
+                               class="text-decoration-none text-muted d-inline-flex align-items-center gap-1">
+                                Khoa (HUMG) <i class="bi @GetSortIcon("faculty") small"></i>
+                            </a>
+                        </th>
+                        <th class="py-2">Số điện thoại</th>
+                        <th class="text-end pe-3 py-2" style="width: 150px;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody class="border-top-0">
+                    @if (Model != null && Model.Any())
+                    {
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td class="ps-3 fw-bold text-primary">
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 font-monospace">
+                                        <i class="bi bi-person-badge me-1"></i>@item.StudentId
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="fw-bold text-dark">@item.FullName</div>
+                                </td>
+                                <td>
+                                    @if (item.Faculty != null)
+                                    {
+                                        <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle px-2 py-1">
+                                            <i class="bi bi-building me-1"></i>@item.Faculty.FacultyName
+                                            <span class="badge bg-light text-secondary ms-1">@item.Faculty.FacultyCode</span>
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">Chưa phân khoa</span>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="text-secondary small font-monospace">
+                                        <i class="bi bi-telephone text-muted me-1"></i>@(string.IsNullOrEmpty(item.PhoneNumber) ? "Chưa có" : item.PhoneNumber)
+                                    </span>
+                                </td>
+                                <td class="text-end pe-3">
+                                    <div class="btn-group btn-group-sm">
+                                        @if (canDetails)
+                                        {
+                                            <button type="button"
+                                                    class="btn btn-outline-secondary btn-sm py-1 px-2"
+                                                    data-modal-url="@Url.Action("Details", "Student", new { id = item.StudentId })"
+                                                    title="Chi tiết">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        }
+                                        @if (canEdit)
+                                        {
+                                            <button type="button"
+                                                    class="btn btn-outline-warning btn-sm py-1 px-2"
+                                                    data-modal-url="@Url.Action("Edit", "Student", new { id = item.StudentId })"
+                                                    data-modal-size="modal-lg"
+                                                    title="Chỉnh sửa">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                        }
+                                        @if (canDelete)
+                                        {
+                                            <button type="button"
+                                                    class="btn btn-outline-danger btn-sm py-1 px-2"
+                                                    data-modal-url="@Url.Action("Delete", "Student", new { id = item.StudentId })"
+                                                    title="Xóa">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-5">
+                                <i class="bi bi-inbox fs-2 d-block text-secondary mb-2"></i>
+                                @if (!string.IsNullOrEmpty(currentFilter) || !string.IsNullOrEmpty(currentFaculty))
+                                {
+                                    <span>Không tìm thấy sinh viên nào khớp với bộ lọc hiện tại.</span>
+                                    <div class="mt-2">
+                                        <a asp-action="Index" asp-route-pageSize="@currentPageSize"
+                                           data-ajax-link="true" data-ajax-clear-filter="true"
+                                           class="btn btn-sm btn-outline-secondary">
+                                            <i class="bi bi-arrow-clockwise me-1"></i> Xóa bộ lọc tìm kiếm
+                                        </a>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span>Chưa có dữ liệu sinh viên nào trong hệ thống.</span>
+                                    @if (canCreate)
+                                    {
+                                        <div class="mt-2">
+                                            <button type="button"
+                                                    class="btn btn-sm btn-primary"
+                                                    data-modal-url="@Url.Action("Create", "Student")"
+                                                    data-modal-size="modal-lg">
+                                                <i class="bi bi-plus-circle me-1"></i> Thêm sinh viên đầu tiên
+                                            </button>
+                                        </div>
+                                    }
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Thanh phân trang (Pagination Footer) -->
+    @if (Model != null && Model.TotalItems > 0)
+    {
+        <div class="card-footer bg-white py-3 border-top d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div class="text-muted small">
+                Hiển thị <strong>@Model.StartItemIndex</strong> - <strong>@Model.EndItemIndex</strong> trong tổng số <strong>@Model.TotalItems</strong> sinh viên
+                <span class="ms-1 text-secondary">(Trang @Model.PageIndex / @Model.TotalPages)</span>
+            </div>
+
+            @if (Model.TotalPages > 1)
+            {
+                int startPage = Math.Max(1, Model.PageIndex - 2);
+                int endPage = Math.Min(Model.TotalPages, startPage + 4);
+                if (endPage - startPage < 4)
+                {
+                    startPage = Math.Max(1, endPage - 4);
+                }
+
+                <nav aria-label="Phân trang danh sách sinh viên">
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item @(Model.HasPreviousPage ? "" : "disabled")">
+                            <a class="page-link" asp-action="Index"
+                               asp-route-pageNumber="1"
+                               asp-route-pageSize="@currentPageSize"
+                               asp-route-sortOrder="@currentSort"
+                               asp-route-searchString="@currentFilter"
+                               asp-route-facultyId="@currentFaculty"
+                               data-ajax-link="true"
+                               title="Trang đầu">
+                                <i class="bi bi-chevron-double-left"></i>
+                            </a>
+                        </li>
+
+                        <li class="page-item @(Model.HasPreviousPage ? "" : "disabled")">
+                            <a class="page-link" asp-action="Index"
+                               asp-route-pageNumber="@(Model.PageIndex - 1)"
+                               asp-route-pageSize="@currentPageSize"
+                               asp-route-sortOrder="@currentSort"
+                               asp-route-searchString="@currentFilter"
+                               asp-route-facultyId="@currentFaculty"
+                               data-ajax-link="true"
+                               title="Trang trước">
+                                <i class="bi bi-chevron-left"></i> Trước
+                            </a>
+                        </li>
+
+                        @for (int i = startPage; i <= endPage; i++)
+                        {
+                            <li class="page-item @(i == Model.PageIndex ? "active" : "")">
+                                <a class="page-link" asp-action="Index"
+                                   asp-route-pageNumber="@i"
+                                   asp-route-pageSize="@currentPageSize"
+                                   asp-route-sortOrder="@currentSort"
+                                   asp-route-searchString="@currentFilter"
+                                   asp-route-facultyId="@currentFaculty"
+                                   data-ajax-link="true">
+                                    @i
+                                </a>
+                            </li>
+                        }
+
+                        <li class="page-item @(Model.HasNextPage ? "" : "disabled")">
+                            <a class="page-link" asp-action="Index"
+                               asp-route-pageNumber="@(Model.PageIndex + 1)"
+                               asp-route-pageSize="@currentPageSize"
+                               asp-route-sortOrder="@currentSort"
+                               asp-route-searchString="@currentFilter"
+                               asp-route-facultyId="@currentFaculty"
+                               data-ajax-link="true"
+                               title="Trang sau">
+                                Sau <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+
+                        <li class="page-item @(Model.HasNextPage ? "" : "disabled")">
+                            <a class="page-link" asp-action="Index"
+                               asp-route-pageNumber="@Model.TotalPages"
+                               asp-route-pageSize="@currentPageSize"
+                               asp-route-sortOrder="@currentSort"
+                               asp-route-searchString="@currentFilter"
+                               asp-route-facultyId="@currentFaculty"
+                               data-ajax-link="true"
+                               title="Trang cuối">
+                                <i class="bi bi-chevron-double-right"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            }
+        </div>
+    }
+</div>

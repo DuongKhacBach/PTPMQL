@@ -1,7 +1,9 @@
 @model DemoMVC.Models.Faculty
+@inject IAuthorizationService AuthorizationService
 
 @{
     ViewData["Title"] = "Chi tiết Khoa";
+    bool canEdit = (await AuthorizationService.AuthorizeAsync(User, SystemPermissions.Faculty.Edit)).Succeeded;
 }
 
 <div class="row justify-content-center">
@@ -46,7 +48,7 @@
                 <a asp-action="Index" class="btn btn-outline-secondary px-3 py-2 rounded-2">
                     <i class="bi bi-arrow-left me-1"></i> Quay lại danh sách
                 </a>
-                @if (User.IsInRole("Admin"))
+                @if (canEdit)
                 {
                     <a asp-action="Edit" asp-route-id="@Model.FacultyId" class="btn btn-warning px-3 py-2 rounded-2 fw-semibold text-dark">
                         <i class="bi bi-pencil-square me-1"></i> Chỉnh sửa

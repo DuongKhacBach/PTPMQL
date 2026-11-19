@@ -1,7 +1,14 @@
-@model IEnumerable<DemoMVC.Models.ViewModels.UserWithRoleVM>
+@model DemoMVC.Models.PaginatedList<DemoMVC.Models.ViewModels.UserWithRoleVM>
+@inject IAuthorizationService AuthorizationService
 
 @{
     ViewData["Title"] = "Quản lý Tài khoản & Phân quyền";
+    var currentFilter = ViewData["CurrentFilter"] as string;
+    var currentRoleFilter = ViewData["CurrentRoleFilter"] as string;
+    var currentPageSize = ViewData["CurrentPageSize"] is int ps ? ps : (Model?.PageSize ?? 10);
+    int[] pageSizeOptions = new[] { 5, 10, 20, 50 };
+
+    bool canViewRoles = (await AuthorizationService.AuthorizeAsync(User, SystemPermissions.Role.Index)).Succeeded;
 }
 
 @if (TempData["SuccessMessage"] != null)
@@ -13,82 +20,77 @@
 }
 
 <div class="card shadow-sm border-0 rounded-3">
-    <div class="card-header bg-white py-3 border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2">
-        <div class="d-flex align-items-center gap-2">
-            <div class="bg-primary text-white rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
-                <i class="bi bi-person-gear fs-5"></i>
+    <div class="card-header bg-white py-3 border-bottom">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+            <div class="d-flex align-items-center gap-2">
+                <div class="bg-primary text-white rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">
+                    <i class="bi bi-person-gear fs-5"></i>
+                </div>
+                <div>
+                    <h5 class="fw-bold text-dark mb-0">Danh sách Tài khoản Người dùng</h5>
+                    <small class="text-muted">
+                        Tổng cộng <strong data-total-count-target>@(Model?.TotalItems ?? 0)</strong> tài khoản trong hệ thống
+                        <span data-filter-keyword-target class="@(string.IsNullOrEmpty(currentFilter) ? "d-none" : "")">
+                            @if (!string.IsNullOrEmpty(currentFilter))
+                            {
+                                <span>với từ khóa <mark class="px-1 rounded">"@currentFilter"</mark></span>
+                            }
+                        </span>
+                    </small>
+                </div>
             </div>
-            <div>
-                <h5 class="fw-bold text-dark mb-0">Danh sách Tài khoản Người dùng</h5>
-                <small class="text-muted">Tổng cộng <strong>@(Model?.Count() ?? 0)</strong> tài khoản trong hệ thống</small>
+            <div class="d-flex gap-2">
+                @if (canViewRoles)
+                {
+                    <a asp-controller="Role" asp-action="Index" class="btn btn-outline-danger btn-sm px-3 rounded-2">
+                        <i class="bi bi-shield-lock me-1"></i> Quản lý Role
+                    </a>
+                }
             </div>
         </div>
-        <div class="d-flex gap-2">
-            <a asp-controller="Role" asp-action="Index" class="btn btn-outline-danger btn-sm px-3 rounded-2">
-                <i class="bi bi-shield-lock me-1"></i> Quản lý Role
-            </a>
-        </div>
+
+        <!-- Tìm kiếm theo Họ tên / Email + Lọc theo Role + PageSize bằng AJAX -->
+        <form asp-action="Index" method="get" data-ajax-filter="true" class="row g-2 align-items-center">
+            <div class="col-md-5 col-lg-4">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-light text-muted border-end-0">
+                        <i class="bi bi-search"></i>
+                    </span>
+                    <input type="text" name="searchString" value="@currentFilter"
+                           class="form-control border-start-0 ps-0"
+                           placeholder="Tìm theo Họ tên, Email, UserName..." />
+                    <button type="submit" class="btn btn-primary px-3">Tìm kiếm</button>
+                    <a asp-action="Index" asp-route-pageSize="@currentPageSize"
+                       data-ajax-link="true" data-ajax-clear-filter="true"
+                       class="btn btn-outline-secondary @(string.IsNullOrEmpty(currentFilter) && string.IsNullOrEmpty(currentRoleFilter) ? "d-none" : "")"
+                       title="Xóa bộ lọc">
+                        <i class="bi bi-x-lg"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="col-md-3 col-lg-3">
+                <select name="roleFilter" asp-items="ViewBag.RoleList" class="form-select form-select-sm" data-ajax-autosubmit="true">
+                    <option value="">-- Tất cả Role --</option>
+                </select>
+            </div>
+            <div class="col-md-4 col-lg-5 d-flex justify-content-md-end align-items-center gap-2 small text-muted">
+                <label for="accountPageSize" class="mb-0 text-nowrap">Hiển thị:</label>
+                <select id="accountPageSize" name="pageSize" class="form-select form-select-sm py-1" style="width: auto;" data-ajax-autosubmit="true">
+                    @foreach (var size in pageSizeOptions)
+                    {
+                        <option value="@size" selected="@(size == currentPageSize ? "selected" : null)">@size dòng / trang</option>
+                    }
+                </select>
+            </div>
+        </form>
     </div>
 
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light text-muted small text-uppercase">
-                    <tr>
-                        <th class="ps-3 py-2">Họ và tên</th>
-                        <th class="py-2">Email / Tài khoản</th>
-                        <th class="py-2">Quyền hiện tại (Roles)</th>
-                        <th class="text-end pe-3 py-2" style="width: 180px;">Thao tác</th>
-                    </tr>
-                </thead>
-                <tbody class="border-top-0">
-                    @if (Model != null && Model.Any())
-                    {
-                        @foreach (var item in Model)
-                        {
-                            <tr>
-                                <td class="ps-3 fw-semibold text-dark">
-                                    @(string.IsNullOrWhiteSpace(item.User.FullName) ? "Chưa cập nhật" : item.User.FullName)
-                                </td>
-                                <td>
-                                    <span class="font-monospace small text-primary">@item.User.Email</span>
-                                </td>
-                                <td>
-                                    @if (item.Roles != null && item.Roles.Any())
-                                    {
-                                        <div class="d-flex flex-wrap gap-1">
-                                            @foreach (var role in item.Roles)
-                                            {
-                                                var badgeClass = role == "Admin"
-                                                    ? "bg-danger-subtle text-danger border-danger-subtle"
-                                                    : role == "GiangVien"
-                                                        ? "bg-warning-subtle text-warning-emphasis border-warning-subtle"
-                                                        : "bg-info-subtle text-info-emphasis border-info-subtle";
-                                                <span class="badge @badgeClass border px-2 py-1">@role</span>
-                                            }
-                                        </div>
-                                    }
-                                    else
-                                    {
-                                        <span class="text-muted small fst-italic">Chưa gán quyền</span>
-                                    }
-                                </td>
-                                <td class="text-end pe-3">
-                                    <a asp-action="AssignRole" asp-route-userId="@item.User.Id" class="btn btn-outline-primary btn-sm px-3">
-                                        <i class="bi bi-key me-1"></i> Gán Role
-                                    </a>
-                                </td>
-                            </tr>
-                        }
-                    }
-                    else
-                    {
-                        <tr>
-                            <td colspan="4" class="text-center text-muted py-4">Chưa có tài khoản nào trong hệ thống.</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
+    <!-- Container bảng Tài khoản tải động bằng AJAX -->
+    <div id="dataTableContainer">
+        @await Html.PartialAsync("_AccountTablePartial", Model)
     </div>
 </div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
