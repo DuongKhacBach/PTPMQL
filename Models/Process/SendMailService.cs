@@ -57,8 +57,9 @@ namespace DemoMVC.Models.Process
 
             try
             {
+                var cleanPassword = string.Concat(_mailSettings.Password.Where(c => !char.IsWhiteSpace(c)));
                 await smtp.ConnectAsync(_mailSettings.Host, _mailSettings.Port, SecureSocketOptions.StartTls);
-                await smtp.AuthenticateAsync(_mailSettings.Mail.Trim(), _mailSettings.Password.Trim());
+                await smtp.AuthenticateAsync(_mailSettings.Mail.Trim(), cleanPassword);
                 await smtp.SendAsync(new SendRequest(message));
                 await smtp.DisconnectAsync(true);
 
