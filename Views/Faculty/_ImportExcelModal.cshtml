@@ -33,7 +33,7 @@
                 </button>
             </div>
             <div class="form-text text-muted mt-2 small">
-                <i class="bi bi-info-circle me-1"></i>Hỗ trợ <strong>4 cột</strong> (<code>STT | Mã Khoa | Mã số ngành (2 số) | Tên Khoa</code>) và <strong>3 cột</strong> (<code>Mã Khoa | Mã số ngành | Tên Khoa</code>). Mã ngành bắt buộc gồm đúng <strong>2 chữ số</strong> (VD: <code>05</code>, <code>10</code>).
+                <i class="bi bi-info-circle me-1"></i><strong>Tự động nhận diện cột</strong> – không cần đúng thứ tự: Mã Khoa (chữ viết hoa ngắn, VD CNTT), Mã ngành (2 chữ số 01–99), Tên Khoa (chuỗi dài có dấu/khoảng trắng).
             </div>
         </div>
 
@@ -87,6 +87,19 @@
                     <i class="bi bi-x-octagon-fill me-1"></i>Chi tiết các dòng không hợp lệ (sẽ bị bỏ qua):
                 </div>
                 <ul id="importErrorList" class="mb-0 ps-3"></ul>
+            </div>
+
+            <!-- Bảng xem trước các cột đã được hệ thống TỰ ĐỘNG NHẬN DIỆN (tối đa 100 dòng) -->
+            <div id="importPreviewTableBox" class="mt-3 d-none">
+                <div class="fw-semibold small text-dark mb-1">
+                    <i class="bi bi-magic text-primary me-1"></i>Dữ liệu đã tự động nhận diện cột (tối đa 100 dòng đầu):
+                </div>
+                <div class="table-responsive border rounded-2" style="max-height: 280px;">
+                    <table class="table table-sm table-striped align-middle mb-0 small" id="importPreviewTable" data-headers="Mã Khoa|Mã ngành|Tên Khoa">
+                        <thead class="table-light sticky-top"></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
             </div>
         </div>
 

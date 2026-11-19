@@ -62,22 +62,43 @@ namespace DemoMVC.Controllers
                 usersQuery = usersQuery.Where(u => userIdsInRole.Contains(u.Id));
             }
 
-            var usersList = await usersQuery.OrderBy(u => u.Email).ToListAsync();
+            var usersList = await usersQuery
+                .OrderBy(u => u.IsApproved)
+                .ThenBy(u => u.Email)
+                .ToListAsync();
+
+            var indexedUsers = usersList
+                .Select((u, index) => new { Stt = index + 1, User = u })
+                .ToList();
 
             if (!string.IsNullOrWhiteSpace(searchString))
             {
                 var keyword = searchString.Trim();
-                usersList = usersList.Where(u =>
-                    VietnameseTextHelper.ContainsMatch(u.FullName, keyword) ||
-                    VietnameseTextHelper.ContainsMatch(u.Email, keyword) ||
-                    VietnameseTextHelper.ContainsMatch(u.UserName, keyword))
+                bool hasStt = int.TryParse(keyword, out int searchStt) && searchStt > 0;
+
+                indexedUsers = indexedUsers.Where(x =>
+                    (hasStt && x.Stt == searchStt) ||
+                    VietnameseTextHelper.ContainsMatch(x.User.FullName, keyword) ||
+                    VietnameseTextHelper.ContainsMatch(x.User.Email, keyword) ||
+                    VietnameseTextHelper.ContainsMatch(x.User.UserName, keyword) ||
+                    VietnameseTextHelper.ContainsMatch(x.User.StudentCode, keyword) ||
+                    VietnameseTextHelper.ContainsMatch(x.User.StaffCode, keyword) ||
+                    VietnameseTextHelper.ContainsMatch(x.User.UserType, keyword))
                     .ToList();
             }
 
-            var pagedUsers = PaginatedList<ApplicationUser>.Create(usersList, currentPageNumber, currentPageSize);
+            int totalItems = indexedUsers.Count;
+            int totalPages = (int)Math.Ceiling(totalItems / (double)currentPageSize);
+            if (totalPages > 0 && currentPageNumber > totalPages) currentPageNumber = totalPages;
+
+            var pagedIndexed = indexedUsers
+                .Skip((currentPageNumber - 1) * currentPageSize)
+                .Take(currentPageSize)
+                .ToList();
 
             // Chỉ truy vấn Role của các User trong trang hiện tại (1 truy vấn duy nhất, không N+1)
-            var pagedUserIds = pagedUsers.Select(u => u.Id).ToList();
+            var pagedUserIds = pagedIndexed.Select(x => x.User.Id).ToList();
+
             var roleLookup = await (from ur in _context.UserRoles.AsNoTracking()
                                     join r in _context.Roles.AsNoTracking() on ur.RoleId equals r.Id
                                     where pagedUserIds.Contains(ur.UserId) && r.Name != null
@@ -88,17 +109,20 @@ namespace DemoMVC.Controllers
                 .GroupBy(x => x.UserId)
                 .ToDictionary(g => g.Key, g => (IList<string>)g.Select(x => x.RoleName).OrderBy(n => n).ToList());
 
-            var userWithRoles = pagedUsers.Select(user => new UserWithRoleVM
-            {
-                User = user,
-                Roles = rolesByUserId.TryGetValue(user.Id, out var roles) ? roles : new List<string>()
-            }).ToList();
+            var userWithRoles = pagedIndexed
+                .Select(x => new UserWithRoleVM
+                {
+                    Stt = x.Stt,
+                    User = x.User,
+                    Roles = rolesByUserId.TryGetValue(x.User.Id, out var roles) ? roles : new List<string>()
+                })
+                .ToList();
 
             var paginatedResult = new PaginatedList<UserWithRoleVM>(
                 userWithRoles,
-                pagedUsers.TotalItems,
-                pagedUsers.PageIndex,
-                pagedUsers.PageSize);
+                totalItems,
+                currentPageNumber,
+                currentPageSize);
 
             if (Request.IsAjaxRequest())
             {
@@ -208,6 +232,169 @@ namespace DemoMVC.Controllers
 
             TempData["SuccessMessage"] = successMsg;
             return RedirectToAction(nameof(Index));
+        }
+
+        // =======================================================
+        // PHÊ DUYỆT TÀI KHOẢN GIẢNG VIÊN (NHIỆM VỤ 3C)
+        // =======================================================
+        [HttpGet, ActionName("ApproveLecturer")]
+        [Authorize(Policy = SystemPermissions.Account.Approve)]
+        public async Task<IActionResult> ApproveLecturerModal(string? userId)
+        {
+            if (string.IsNullOrWhiteSpace(userId)) return NotFound();
+
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null) return NotFound();
+
+            if (Request.IsAjaxRequest())
+            {
+                return PartialView("_ApproveLecturerModal", user);
+            }
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Policy = SystemPermissions.Account.Approve)]
+        public async Task<IActionResult> ApproveLecturer(string userId)
+        {
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                return Json(new { success = false, message = "Thiếu mã tài khoản cần duyệt." });
+            }
+
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                return Json(new { success = false, message = "Không tìm thấy tài khoản cần phê duyệt." });
+            }
+
+            if (user.IsApproved && user.UserType == "GiangVien")
+            {
+                return Json(new { success = false, message = $"Tài khoản '{user.Email}' đã được phê duyệt trước đó." });
+            }
+
+            user.UserType = "GiangVien";
+            user.IsApproved = true;
+            var updateRes = await _userManager.UpdateAsync(user);
+            if (!updateRes.Succeeded)
+            {
+                var err = string.Join("; ", updateRes.Errors.Select(e => e.Description));
+                return Request.IsAjaxRequest()
+                    ? Json(new { success = false, message = err })
+                    : RedirectToAction(nameof(Index));
+            }
+
+            if (await _roleManager.RoleExistsAsync("GiangVien") && !await _userManager.IsInRoleAsync(user, "GiangVien"))
+            {
+                await _userManager.AddToRoleAsync(user, "GiangVien");
+            }
+
+            // Gỡ Role SinhVien nếu trước đó có gán nhầm
+            if (await _userManager.IsInRoleAsync(user, "SinhVien"))
+            {
+                await _userManager.RemoveFromRoleAsync(user, "SinhVien");
+            }
+
+            await _userManager.UpdateSecurityStampAsync(user);
+
+            var successMsg = $"Đã phê duyệt tài khoản Giảng viên '{user.Email}' và gán Role 'GiangVien' thành công.";
+            if (Request.IsAjaxRequest())
+            {
+                return Json(new { success = true, message = successMsg });
+            }
+
+            TempData["SuccessMessage"] = successMsg;
+            return RedirectToAction(nameof(Index));
+        }
+
+        // =======================================================
+        // XÓA TÀI KHOẢN SINH VIÊN (BẢO VỆ ADMIN & GIẢNG VIÊN)
+        // =======================================================
+        [HttpGet]
+        [Authorize(Policy = SystemPermissions.Account.Delete)]
+        public async Task<IActionResult> Delete(string? userId)
+        {
+            if (string.IsNullOrWhiteSpace(userId)) return NotFound();
+
+            var targetUser = await _userManager.FindByIdAsync(userId);
+            if (targetUser == null) return NotFound();
+
+            var targetRoles = await _userManager.GetRolesAsync(targetUser);
+            ViewBag.TargetRoles = targetRoles;
+            ViewBag.IsProtected = IsProtectedAccount(targetUser, targetRoles);
+
+            if (Request.IsAjaxRequest())
+            {
+                return PartialView("_DeleteModal", targetUser);
+            }
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpPost, ActionName("Delete")]
+        [ValidateAntiForgeryToken]
+        [Authorize(Policy = SystemPermissions.Account.Delete)]
+        public async Task<IActionResult> DeleteConfirmed(string userId)
+        {
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                return Json(new { success = false, message = "Không xác định được tài khoản cần xóa." });
+            }
+
+            var targetUser = await _userManager.FindByIdAsync(userId);
+            if (targetUser == null)
+            {
+                const string notFoundMsg = "Không tìm thấy tài khoản cần xóa.";
+                if (Request.IsAjaxRequest()) return Json(new { success = false, message = notFoundMsg });
+                TempData["ErrorMessage"] = notFoundMsg;
+                return RedirectToAction(nameof(Index));
+            }
+
+            var targetRoles = await _userManager.GetRolesAsync(targetUser);
+            if (IsProtectedAccount(targetUser, targetRoles))
+            {
+                const string protectedMsg = "Không thể xóa tài khoản Quản trị viên (Admin) hoặc Giáo viên/Giảng viên!";
+                if (Request.IsAjaxRequest())
+                {
+                    return Json(new { success = false, message = protectedMsg });
+                }
+                TempData["ErrorMessage"] = protectedMsg;
+                return RedirectToAction(nameof(Index));
+            }
+
+            var result = await _userManager.DeleteAsync(targetUser);
+            if (result.Succeeded)
+            {
+                var successMsg = $"Đã xóa tài khoản '{targetUser.Email}' thành công.";
+                if (Request.IsAjaxRequest())
+                {
+                    return Json(new { success = true, message = successMsg });
+                }
+                TempData["SuccessMessage"] = successMsg;
+            }
+            else
+            {
+                var errMsg = string.Join("; ", result.Errors.Select(e => e.Description));
+                if (Request.IsAjaxRequest())
+                {
+                    return Json(new { success = false, message = errMsg });
+                }
+                TempData["ErrorMessage"] = errMsg;
+            }
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        private bool IsProtectedAccount(ApplicationUser targetUser, IList<string> targetRoles)
+        {
+            var currentUserId = _userManager.GetUserId(User);
+            if (targetUser.Id == currentUserId) return true;
+            if (targetRoles.Contains("Admin") || targetRoles.Contains("GiangVien")) return true;
+            if (string.Equals(targetUser.UserType, "Admin", StringComparison.OrdinalIgnoreCase)) return true;
+            if (string.Equals(targetUser.UserType, "GiangVien", StringComparison.OrdinalIgnoreCase) && targetUser.IsApproved) return true;
+            return false;
         }
     }
 }

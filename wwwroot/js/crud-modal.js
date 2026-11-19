@@ -583,6 +583,43 @@
     }
 
     // Khởi tạo quy trình 2 bước Import Excel (Bước 1: Xem trước thống kê -> Bước 2: Xác nhận Append/Overwrite)
+    // Hiển thị bảng xem trước các cột đã được server tự động nhận diện (Mã SV, Họ tên, SĐT, Khoa...)
+    function renderImportPreviewTable(form, rows) {
+        const box = form.querySelector('#importPreviewTableBox');
+        const table = form.querySelector('#importPreviewTable');
+        if (!box || !table) return;
+
+        if (!Array.isArray(rows) || rows.length === 0) {
+            box.classList.add('d-none');
+            return;
+        }
+
+        const headers = (table.getAttribute('data-headers') || '').split('|');
+        const thead = table.querySelector('thead');
+        const tbody = table.querySelector('tbody');
+        thead.innerHTML = '<tr><th class="text-center" style="width:60px;">Dòng</th>'
+            + headers.map((h) => `<th>${escapeHtml(h)}</th>`).join('')
+            + '<th style="width:110px;">Trạng thái</th></tr>';
+
+        tbody.innerHTML = rows.map((r) => {
+            const cols = [r.primaryKey, r.col2, r.col3, r.col4].slice(0, headers.length);
+            const statusClass = r.status === 'Lỗi'
+                ? 'bg-danger-subtle text-danger'
+                : r.status === 'Mới' ? 'bg-success-subtle text-success' : 'bg-warning-subtle text-warning-emphasis';
+            const rowClass = r.status === 'Lỗi' ? 'table-danger' : '';
+            const cells = cols.map((c) => c
+                ? `<td>${escapeHtml(c)}</td>`
+                : '<td><span class="text-danger fst-italic">(thiếu)</span></td>').join('');
+            const title = r.warningMessage ? ` title="${escapeHtml(r.warningMessage)}"` : '';
+            return `<tr class="${rowClass}"><td class="text-center text-muted">${r.rowNumber}</td>${cells}`
+                + `<td><span class="badge ${statusClass} border"${title}>${escapeHtml(r.status)}</span>`
+                + (r.status === 'Lỗi' && r.warningMessage ? `<div class="text-danger" style="font-size:.75rem;">${escapeHtml(r.warningMessage)}</div>` : '')
+                + '</td></tr>';
+        }).join('');
+
+        box.classList.remove('d-none');
+    }
+
     function initImportExcelWorkflow(container) {
         const form = container.querySelector('#importExcelForm');
         if (!form) return;
@@ -718,6 +755,8 @@
                             errList.innerHTML = '';
                         }
                     }
+
+                    renderImportPreviewTable(form, data.previewRows);
 
                     if (previewSection) previewSection.classList.remove('d-none');
 

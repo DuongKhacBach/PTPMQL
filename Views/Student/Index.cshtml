@@ -1,4 +1,4 @@
-@model DemoMVC.Models.PaginatedList<DemoMVC.Models.Student>
+@model DemoMVC.Models.PaginatedList<DemoMVC.Models.ViewModels.SttRowVM<DemoMVC.Models.Student>>
 @inject IAuthorizationService AuthorizationService
 
 @{
@@ -101,7 +101,7 @@
                     </span>
                     <input type="text" name="searchString" value="@currentFilter"
                            class="form-control border-start-0 ps-0"
-                           placeholder="Tìm kiếm theo Tên, Mã SV, Khoa, SĐT..." />
+                           placeholder="Tìm kiếm theo STT, Tên, Mã SV, Khoa, SĐT..." />
                     <button type="submit" class="btn btn-primary px-3">
                         Tìm kiếm
                     </button>

@@ -1,0 +1,37 @@
+@model DemoMVC.Models.ApplicationUser
+
+<div class="modal-header bg-success text-white">
+    <h5 class="modal-title fw-bold" id="crudModalLabel">
+        <i class="bi bi-patch-check-fill me-2"></i>Phê duyệt tài khoản Giảng viên
+    </h5>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Đóng"></button>
+</div>
+
+<form asp-controller="Account" asp-action="ApproveLecturer" method="post" data-ajax-form="true">
+    <input type="hidden" name="userId" value="@Model.Id" />
+    <div class="modal-body p-4">
+        <div class="alert alert-danger py-2 small d-none" data-modal-error role="alert"></div>
+        <p class="mb-3">Xác nhận phê duyệt tư cách <strong>Giảng viên / Cán bộ</strong> và gán Role <span class="badge bg-warning-subtle text-warning-emphasis border">GiangVien</span> cho tài khoản sau:</p>
+        <div class="list-group list-group-flush border rounded-2 small">
+            <div class="list-group-item d-flex justify-content-between py-2">
+                <span class="text-muted">Họ và tên:</span>
+                <span class="fw-semibold">@Model.FullName</span>
+            </div>
+            <div class="list-group-item d-flex justify-content-between py-2">
+                <span class="text-muted">Email:</span>
+                <span class="font-monospace text-primary">@Model.Email</span>
+            </div>
+            <div class="list-group-item d-flex justify-content-between py-2">
+                <span class="text-muted">Mã cán bộ:</span>
+                <span class="font-monospace">@(Model.StaffCode ?? "—")</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-footer bg-light d-flex justify-content-between">
+        <button type="button" class="btn btn-outline-secondary btn-sm px-3" data-bs-dismiss="modal">Hủy</button>
+        <button type="submit" class="btn btn-success btn-sm px-4">
+            <i class="bi bi-check2-circle me-1"></i> Duyệt Giảng viên
+        </button>
+    </div>
+</form>

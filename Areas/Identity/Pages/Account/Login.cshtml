@@ -18,7 +18,33 @@
             </div>
             <div class="card-body p-4">
                 <form id="account" method="post">
+                    @if (!string.IsNullOrEmpty(Model.StatusMessage))
+                    {
+                        <div class="alert alert-success py-2 small" role="alert">
+                            <i class="bi bi-info-circle-fill me-1"></i>@Model.StatusMessage
+                        </div>
+                    }
                     <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 small" role="alert"></div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small d-block">Tư cách đăng nhập</label>
+                        <div class="row g-2" role="radiogroup">
+                            <div class="col-6">
+                                <input type="radio" class="btn-check" asp-for="Input.LoginAs" value="SinhVien" id="loginAsStudent" autocomplete="off" />
+                                <label class="btn btn-outline-primary w-100 py-2 small" for="loginAsStudent">
+                                    <i class="bi bi-mortarboard-fill d-block fs-5 mb-1"></i>
+                                    <span class="small fw-semibold">Đăng nhập với tư cách Sinh viên</span>
+                                </label>
+                            </div>
+                            <div class="col-6">
+                                <input type="radio" class="btn-check" asp-for="Input.LoginAs" value="GiangVien" id="loginAsStaff" autocomplete="off" />
+                                <label class="btn btn-outline-danger w-100 py-2 small" for="loginAsStaff">
+                                    <i class="bi bi-person-workspace d-block fs-5 mb-1"></i>
+                                    <span class="small fw-semibold">Đăng nhập với tư cách Giảng viên / Quản trị</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
 
                     <div class="mb-3">
                         <label asp-for="Input.Email" class="form-label fw-semibold small">Email</label>

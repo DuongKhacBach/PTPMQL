@@ -1,5 +1,6 @@
 @model DemoMVC.Models.PaginatedList<DemoMVC.Models.ViewModels.UserWithRoleVM>
 @inject IAuthorizationService AuthorizationService
+@inject Microsoft.AspNetCore.Identity.UserManager<DemoMVC.Models.ApplicationUser> UserManager
 
 @{
     var currentFilter = ViewData["CurrentFilter"] as string;
@@ -7,6 +8,9 @@
     var currentPageSize = ViewData["CurrentPageSize"] is int ps ? ps : (Model?.PageSize ?? 10);
 
     bool canAssignRole = (await AuthorizationService.AuthorizeAsync(User, SystemPermissions.Account.AssignRole)).Succeeded;
+    bool canApprove = (await AuthorizationService.AuthorizeAsync(User, SystemPermissions.Account.Approve)).Succeeded;
+    bool canDeleteAccount = (await AuthorizationService.AuthorizeAsync(User, SystemPermissions.Account.Delete)).Succeeded;
+    var currentUserId = UserManager.GetUserId(User);
 }
 
 <div data-total-items="@(Model?.TotalItems ?? 0)" data-current-filter="@(currentFilter ?? string.Empty)">
@@ -15,11 +19,14 @@
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light text-muted small text-uppercase">
                     <tr>
+                        <th class="text-center py-2" style="width: 70px;">STT</th>
                         <th class="ps-3 py-2">Họ và tên</th>
                         <th class="py-2">Email / Tài khoản</th>
-                        <th class="py-2">Xác thực Email</th>
+                        <th class="py-2">Mã SV / Mã CB</th>
+                        <th class="py-2">Tư cách</th>
+                        <th class="py-2">Trạng thái</th>
                         <th class="py-2">Quyền hiện tại (Roles)</th>
-                        <th class="text-end pe-3 py-2" style="width: 160px;">Thao tác</th>
+                        <th class="text-end pe-3 py-2" style="width: 230px;">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody class="border-top-0">
@@ -27,25 +34,53 @@
                     {
                         @foreach (var item in Model)
                         {
+                            var u = item.User;
+                            var userRoles = item.Roles ?? new List<string>();
+                            bool isLecturerType = u.UserType == "GiangVien";
+                            bool isPending = !u.IsApproved;
+                            bool isStudentAccount = !userRoles.Contains("Admin") && !userRoles.Contains("GiangVien")
+                                                    && u.UserType != "Admin" && !(isLecturerType && u.IsApproved)
+                                                    && u.Id != currentUserId;
+                            var code = !string.IsNullOrWhiteSpace(u.StudentCode) ? u.StudentCode : u.StaffCode;
+                            var (typeText, typeClass) = u.UserType switch
+                            {
+                                "Admin" => ("Quản trị", "bg-danger-subtle text-danger border-danger-subtle"),
+                                "GiangVien" => ("Giảng viên / Cán bộ", "bg-warning-subtle text-warning-emphasis border-warning-subtle"),
+                                _ => ("Sinh viên", "bg-info-subtle text-info-emphasis border-info-subtle")
+                            };
                             <tr>
+                                <td class="text-center fw-semibold text-secondary small" style="width: 70px;">@item.Stt</td>
                                 <td class="ps-3 fw-semibold text-dark">
-                                    @(string.IsNullOrWhiteSpace(item.User.FullName) ? "Chưa cập nhật" : item.User.FullName)
-                                </td>
-                                <td>
-                                    <span class="font-monospace small text-primary">@item.User.Email</span>
-                                </td>
-                                <td>
-                                    @if (item.User.EmailConfirmed)
+                                    @(string.IsNullOrWhiteSpace(u.FullName) ? "Chưa cập nhật" : u.FullName)
+                                    @if (!u.EmailConfirmed)
                                     {
-                                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
-                                            <i class="bi bi-check-circle-fill me-1"></i>Đã xác thực
-                                        </span>
+                                        <div class="small text-muted fw-normal"><i class="bi bi-envelope-exclamation me-1"></i>Email chưa xác thực</div>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="font-monospace small text-primary">@u.Email</span>
+                                </td>
+                                <td>
+                                    @if (string.IsNullOrWhiteSpace(code))
+                                    {
+                                        <span class="text-muted small fst-italic">—</span>
                                     }
                                     else
                                     {
-                                        <span class="badge bg-secondary-subtle text-secondary border px-2 py-1">
-                                            <i class="bi bi-clock me-1"></i>Chưa xác thực
-                                        </span>
+                                        <span class="badge bg-light text-dark border font-monospace px-2 py-1">@code</span>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="badge @typeClass border px-2 py-1">@typeText</span>
+                                </td>
+                                <td>
+                                    @if (isPending)
+                                    {
+                                        <span class="badge bg-warning text-dark px-2 py-1"><i class="bi bi-hourglass-split me-1"></i>Chờ duyệt GV</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><i class="bi bi-check-circle-fill me-1"></i>Đã duyệt</span>
                                     }
                                 </td>
                                 <td>
@@ -69,14 +104,35 @@
                                     }
                                 </td>
                                 <td class="text-end pe-3">
-                                    @if (canAssignRole)
-                                    {
-                                        <button type="button"
-                                                class="btn btn-outline-primary btn-sm px-3"
-                                                data-modal-url="@Url.Action("AssignRole", "Account", new { userId = item.User.Id })">
-                                            <i class="bi bi-key me-1"></i> Gán Role
-                                        </button>
-                                    }
+                                    <div class="btn-group btn-group-sm">
+                                        @if (canApprove && isPending && isLecturerType)
+                                        {
+                                            <button type="button"
+                                                    class="btn btn-success btn-sm px-2"
+                                                    data-modal-url="@Url.Action("ApproveLecturer", "Account", new { userId = u.Id })"
+                                                    title="Duyệt Giảng viên">
+                                                <i class="bi bi-patch-check me-1"></i>Duyệt GV
+                                            </button>
+                                        }
+                                        @if (canAssignRole)
+                                        {
+                                            <button type="button"
+                                                    class="btn btn-outline-primary btn-sm px-2"
+                                                    data-modal-url="@Url.Action("AssignRole", "Account", new { userId = u.Id })"
+                                                    title="Gán Role">
+                                                <i class="bi bi-key me-1"></i>Gán Role
+                                            </button>
+                                        }
+                                        @if (canDeleteAccount && isStudentAccount)
+                                        {
+                                            <button type="button"
+                                                    class="btn btn-outline-danger btn-sm px-2"
+                                                    data-modal-url="@Url.Action("Delete", "Account", new { userId = u.Id })"
+                                                    title="Xóa tài khoản">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        }
+                                    </div>
                                 </td>
                             </tr>
                         }
@@ -84,7 +140,7 @@
                     else
                     {
                         <tr>
-                            <td colspan="5" class="text-center text-muted py-4">
+                            <td colspan="8" class="text-center text-muted py-4">
                                 <i class="bi bi-inbox fs-3 d-block text-secondary mb-2"></i>
                                 @if (!string.IsNullOrEmpty(currentFilter) || !string.IsNullOrEmpty(currentRoleFilter))
                                 {

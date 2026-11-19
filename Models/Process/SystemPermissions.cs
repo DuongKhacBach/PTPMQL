@@ -45,6 +45,8 @@ namespace DemoMVC.Models.Process
         {
             public const string Index = "Account.Index";
             public const string AssignRole = "Account.AssignRole";
+            public const string Approve = "Account.Approve";
+            public const string Delete = "Account.Delete";
         }
 
         private static readonly IReadOnlyList<PermissionDefinition> AllPermissions = new List<PermissionDefinition>
@@ -76,7 +78,9 @@ namespace DemoMVC.Models.Process
 
             // Quản lý Tài khoản
             new(Account.Index, "Quản lý Tài khoản", "Xem danh sách Tài khoản", "Xem, tìm kiếm và lọc danh sách tài khoản người dùng"),
-            new(Account.AssignRole, "Quản lý Tài khoản", "Gán Role cho Tài khoản", "Gán hoặc gỡ bỏ vai trò (Role) của tài khoản người dùng")
+            new(Account.AssignRole, "Quản lý Tài khoản", "Gán Role cho Tài khoản", "Gán hoặc gỡ bỏ vai trò (Role) của tài khoản người dùng"),
+            new(Account.Approve, "Quản lý Tài khoản", "Duyệt tài khoản Giảng viên", "Phê duyệt tư cách và gán Role Giảng viên cho tài khoản đăng ký mới"),
+            new(Account.Delete, "Quản lý Tài khoản", "Xóa tài khoản Sinh viên", "Xóa tài khoản sinh viên hoặc tài khoản chưa duyệt (bảo vệ Admin/Giảng viên)")
         };
 
         public static IReadOnlyList<PermissionDefinition> GetAll() => AllPermissions;

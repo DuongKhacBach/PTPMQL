@@ -59,19 +59,23 @@ namespace DemoMVC.Controllers
                 .OrderBy(r => r.Name)
                 .ToListAsync();
 
-            if (!string.IsNullOrWhiteSpace(searchString))
+            var roleItems = roles.Select((r, index) => new RoleListItemVM
             {
-                var keyword = searchString.Trim();
-                roles = roles.Where(r => VietnameseTextHelper.ContainsMatch(r.Name, keyword)).ToList();
-            }
-
-            var roleItems = roles.Select(r => new RoleListItemVM
-            {
+                Stt = index + 1,
                 Id = r.Id,
                 Name = r.Name ?? string.Empty,
                 ClaimCount = claimCounts.TryGetValue(r.Id, out var cc) ? cc : 0,
                 UserCount = userCounts.TryGetValue(r.Id, out var uc) ? uc : 0
             }).ToList();
+
+            if (!string.IsNullOrWhiteSpace(searchString))
+            {
+                var keyword = searchString.Trim();
+                bool hasStt = int.TryParse(keyword, out int searchStt) && searchStt > 0;
+                roleItems = roleItems
+                    .Where(r => (hasStt && r.Stt == searchStt) || VietnameseTextHelper.ContainsMatch(r.Name, keyword))
+                    .ToList();
+            }
 
             var paginatedRoles = PaginatedList<RoleListItemVM>.Create(roleItems, currentPageNumber, currentPageSize);
 

@@ -1,0 +1,58 @@
+@model DemoMVC.Models.ApplicationUser
+@{
+    var targetRoles = ViewBag.TargetRoles as IList<string> ?? new List<string>();
+    bool isProtected = ViewBag.IsProtected is bool p && p;
+}
+
+<div class="modal-header bg-danger text-white">
+    <h5 class="modal-title fw-bold" id="crudModalLabel">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>Xác nhận xóa tài khoản
+    </h5>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Đóng"></button>
+</div>
+
+<form asp-controller="Account" asp-action="Delete" asp-route-userId="@Model.Id" method="post" data-ajax-form="true">
+    <input type="hidden" name="userId" value="@Model.Id" />
+    <div class="modal-body p-4">
+        <div class="alert alert-danger py-2 small d-none" data-modal-error role="alert"></div>
+        @if (isProtected)
+        {
+            <div class="alert alert-warning small mb-3">
+                <i class="bi bi-shield-lock-fill me-1"></i>
+                Không thể xóa tài khoản Quản trị viên (Admin), Giảng viên đã duyệt hoặc chính tài khoản đang đăng nhập.
+            </div>
+        }
+        else
+        {
+            <p class="mb-3">Bạn có chắc chắn muốn xóa vĩnh viễn tài khoản <strong class="text-danger">@Model.Email</strong> không?</p>
+        }
+        <div class="list-group list-group-flush border rounded-2 small">
+            <div class="list-group-item d-flex justify-content-between py-2">
+                <span class="text-muted">Họ và tên:</span>
+                <span class="fw-semibold">@(string.IsNullOrWhiteSpace(Model.FullName) ? "Chưa cập nhật" : Model.FullName)</span>
+            </div>
+            <div class="list-group-item d-flex justify-content-between py-2">
+                <span class="text-muted">Mã SV / Mã CB:</span>
+                <span class="font-monospace">@(Model.StudentCode ?? Model.StaffCode ?? "—")</span>
+            </div>
+            <div class="list-group-item d-flex justify-content-between py-2">
+                <span class="text-muted">Tư cách:</span>
+                <span>@(Model.UserType == "GiangVien" ? "Giảng viên / Cán bộ" : Model.UserType == "Admin" ? "Quản trị" : "Sinh viên")</span>
+            </div>
+            <div class="list-group-item d-flex justify-content-between py-2">
+                <span class="text-muted">Roles:</span>
+                <span>@(targetRoles.Any() ? string.Join(", ", targetRoles) : "Chưa gán")</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-footer bg-light d-flex justify-content-between">
+        <button type="button" class="btn btn-outline-secondary btn-sm px-3" data-bs-dismiss="modal">Hủy</button>
+        @if (!isProtected)
+        {
+            <button type="submit" class="btn btn-danger btn-sm px-4">
+                <i class="bi bi-trash me-1"></i> Xác nhận xóa
+            </button>
+        }
+    </div>
+</form>

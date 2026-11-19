@@ -43,6 +43,9 @@ namespace DemoMVC.Areas.Identity.Pages.Account
 
         public string? ReturnUrl { get; set; }
 
+        private static readonly System.Text.RegularExpressions.Regex StudentCodeRegex =
+            new(@"^2\d{9}$", System.Text.RegularExpressions.RegexOptions.Compiled);
+
         public IList<AuthenticationScheme> ExternalLogins { get; set; } = new List<AuthenticationScheme>();
 
         public class InputModel
@@ -62,6 +65,17 @@ namespace DemoMVC.Areas.Identity.Pages.Account
             [Display(Name = "Mật khẩu")]
             public string Password { get; set; } = string.Empty;
 
+            // Tư cách đăng ký: "SinhVien" (tự động duyệt) hoặc "GiangVien" (chờ Admin duyệt)
+            [Display(Name = "Tư cách đăng ký")]
+            public string AccountType { get; set; } = UserTypes.SinhVien;
+
+            [Display(Name = "Mã sinh viên")]
+            public string? StudentCode { get; set; }
+
+            [Display(Name = "Mã cán bộ")]
+            [StringLength(20, ErrorMessage = "Mã cán bộ tối đa 20 ký tự.")]
+            public string? StaffCode { get; set; }
+
             [DataType(DataType.Password)]
             [Display(Name = "Xác nhận mật khẩu")]
             [Compare("Password", ErrorMessage = "Mật khẩu và mật khẩu xác nhận không khớp.")]
@@ -78,10 +92,42 @@ namespace DemoMVC.Areas.Identity.Pages.Account
         {
             returnUrl ??= Url.Content("~/");
             ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
+            bool isLecturer = Input.AccountType == UserTypes.GiangVien;
+            Input.AccountType = isLecturer ? UserTypes.GiangVien : UserTypes.SinhVien;
+            Input.StudentCode = Input.StudentCode?.Trim();
+            Input.StaffCode = Input.StaffCode?.Trim().ToUpperInvariant();
+
+            if (isLecturer)
+            {
+                if (string.IsNullOrWhiteSpace(Input.StaffCode))
+                {
+                    ModelState.AddModelError("Input.StaffCode", "Vui lòng nhập Mã cán bộ.");
+                }
+                else if (_userManager.Users.Any(u => u.StaffCode == Input.StaffCode))
+                {
+                    ModelState.AddModelError("Input.StaffCode", $"Mã cán bộ '{Input.StaffCode}' đã được đăng ký.");
+                }
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(Input.StudentCode) || !StudentCodeRegex.IsMatch(Input.StudentCode))
+                {
+                    ModelState.AddModelError("Input.StudentCode", "Mã sinh viên phải gồm đúng 10 chữ số và bắt đầu bằng số 2.");
+                }
+                else if (_userManager.Users.Any(u => u.StudentCode == Input.StudentCode))
+                {
+                    ModelState.AddModelError("Input.StudentCode", $"Mã sinh viên '{Input.StudentCode}' đã được đăng ký tài khoản.");
+                }
+            }
+
             if (ModelState.IsValid)
             {
                 var user = CreateUser();
                 user.FullName = Input.FullName.Trim();
+                user.UserType = Input.AccountType;
+                user.StudentCode = isLecturer ? null : Input.StudentCode;
+                user.StaffCode = isLecturer ? Input.StaffCode : null;
+                user.IsApproved = !isLecturer; // Sinh viên tự động duyệt, Giảng viên chờ Admin duyệt
 
                 await _userStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
                 await _emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
@@ -91,8 +137,8 @@ namespace DemoMVC.Areas.Identity.Pages.Account
                 {
                     _logger.LogInformation("Người dùng {Email} đã tạo tài khoản mới thành công.", Input.Email);
 
-                    // Gán mặc định Role SinhVien để sau khi xác nhận email có thể truy cập quyền xem cơ bản
-                    if (await _roleManager.RoleExistsAsync("SinhVien"))
+                    // Sinh viên: gán ngay Role SinhVien. Giảng viên: chưa gán Role, chỉ gán "GiangVien" khi Admin phê duyệt
+                    if (!isLecturer && await _roleManager.RoleExistsAsync("SinhVien"))
                     {
                         await _userManager.AddToRoleAsync(user, "SinhVien");
                     }
@@ -121,6 +167,12 @@ namespace DemoMVC.Areas.Identity.Pages.Account
                         </div>";
 
                     await _emailSender.SendEmailAsync(Input.Email, "Xác nhận tài khoản - Hệ thống Quản lý Sinh viên HUMG", emailBody);
+
+                    if (isLecturer)
+                    {
+                        TempData["StatusMessage"] = "Đăng ký tài khoản Giảng viên/Cán bộ thành công! Tài khoản của bạn đang chờ Quản trị viên (Admin) phê duyệt tư cách giảng viên trước khi có thể đăng nhập.";
+                        return RedirectToPage("./Login", new { returnUrl });
+                    }
 
                     if (_userManager.Options.SignIn.RequireConfirmedAccount)
                     {

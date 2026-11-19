@@ -46,7 +46,14 @@ namespace DemoMVC.Areas.Identity.Pages.Account
 
             [Display(Name = "Ghi nhớ đăng nhập")]
             public bool RememberMe { get; set; }
+
+            // Tư cách đăng nhập: "SinhVien" hoặc "GiangVien" (Giảng viên / Quản trị)
+            [Display(Name = "Tư cách đăng nhập")]
+            public string LoginAs { get; set; } = UserTypes.SinhVien;
         }
+
+        [TempData]
+        public string? StatusMessage { get; set; }
 
         public async Task OnGetAsync(string? returnUrl = null)
         {
@@ -72,12 +79,29 @@ namespace DemoMVC.Areas.Identity.Pages.Account
 
             if (ModelState.IsValid)
             {
+                var targetUser = await _userManager.FindByEmailAsync(Input.Email);
+                if (targetUser != null && !targetUser.IsApproved)
+                {
+                    ModelState.AddModelError(string.Empty, "Tài khoản Cán bộ/Giảng viên của bạn đang chờ Admin phê duyệt. Vui lòng thử lại sau!");
+                    return Page();
+                }
+
                 var result = await _signInManager.PasswordSignInAsync(
                     Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: true);
 
                 if (result.Succeeded)
                 {
-                    _logger.LogInformation("Người dùng {Email} đã đăng nhập thành công.", Input.Email);
+                    var signedInUser = targetUser ?? await _userManager.FindByEmailAsync(Input.Email);
+                    var accessError = signedInUser == null ? null : await ValidateLoginTypeAsync(signedInUser);
+                    if (accessError != null)
+                    {
+                        // Mật khẩu đúng nhưng sai tư cách / chưa được duyệt => hủy phiên vừa tạo
+                        await _signInManager.SignOutAsync();
+                        ModelState.AddModelError(string.Empty, accessError);
+                        return Page();
+                    }
+
+                    _logger.LogInformation("Người dùng {Email} đã đăng nhập thành công với tư cách {LoginAs}.", Input.Email, Input.LoginAs);
                     return LocalRedirect(returnUrl);
                 }
                 if (result.RequiresTwoFactor)
@@ -107,6 +131,28 @@ namespace DemoMVC.Areas.Identity.Pages.Account
             }
 
             return Page();
+        }
+
+        // Kiểm tra trạng thái phê duyệt và đối chiếu tư cách đăng nhập với Role thực tế của tài khoản
+        private async Task<string?> ValidateLoginTypeAsync(ApplicationUser user)
+        {
+            if (!user.IsApproved)
+            {
+                return "Tài khoản Cán bộ/Giảng viên của bạn đang chờ Admin phê duyệt. Vui lòng thử lại sau!";
+            }
+
+            var roles = await _userManager.GetRolesAsync(user);
+            bool isStaff = roles.Contains("Admin") || roles.Contains("GiangVien");
+
+            if (Input.LoginAs == UserTypes.SinhVien && isStaff)
+            {
+                return "Tài khoản này không thuộc tư cách Sinh viên. Vui lòng chuyển sang tab Giảng viên / Quản trị.";
+            }
+            if (Input.LoginAs != UserTypes.SinhVien && !isStaff)
+            {
+                return "Tài khoản Sinh viên không thể đăng nhập ở mục Giảng viên / Quản trị.";
+            }
+            return null;
         }
     }
 }

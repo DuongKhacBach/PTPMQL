@@ -19,12 +19,53 @@
                     <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 small" role="alert"></div>
 
                     <div class="mb-3">
+                        <label class="form-label fw-semibold small d-block">Tư cách đăng ký</label>
+                        <div class="row g-2" role="radiogroup">
+                            <div class="col-6">
+                                <input type="radio" class="btn-check" asp-for="Input.AccountType" value="SinhVien" id="regAsStudent" autocomplete="off" />
+                                <label class="btn btn-outline-primary w-100 py-2" for="regAsStudent">
+                                    <i class="bi bi-mortarboard-fill d-block fs-5 mb-1"></i>
+                                    <span class="small fw-semibold">Đăng ký với tư cách Sinh viên</span>
+                                </label>
+                            </div>
+                            <div class="col-6">
+                                <input type="radio" class="btn-check" asp-for="Input.AccountType" value="GiangVien" id="regAsLecturer" autocomplete="off" />
+                                <label class="btn btn-outline-warning w-100 py-2" for="regAsLecturer">
+                                    <i class="bi bi-person-workspace d-block fs-5 mb-1"></i>
+                                    <span class="small fw-semibold">Đăng ký với tư cách Giảng viên / Cán bộ</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div id="lecturerNotice" class="form-text text-warning-emphasis d-none">
+                            <i class="bi bi-hourglass-split me-1"></i>Tài khoản Giảng viên/Cán bộ cần được Quản trị viên phê duyệt trước khi đăng nhập.
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
                         <label asp-for="Input.FullName" class="form-label fw-semibold small"></label>
                         <div class="input-group">
                             <span class="input-group-text bg-light"><i class="bi bi-person text-muted"></i></span>
                             <input asp-for="Input.FullName" class="form-control" autocomplete="name" aria-required="true" placeholder="Nhập họ và tên đầy đủ..." />
                         </div>
                         <span asp-validation-for="Input.FullName" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3" id="studentCodeGroup">
+                        <label asp-for="Input.StudentCode" class="form-label fw-semibold small"></label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="bi bi-person-badge text-muted"></i></span>
+                            <input asp-for="Input.StudentCode" class="form-control font-monospace" inputmode="numeric" maxlength="10" placeholder="VD: 2521050001 (10 số, bắt đầu bằng 2)" />
+                        </div>
+                        <span asp-validation-for="Input.StudentCode" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3 d-none" id="staffCodeGroup">
+                        <label asp-for="Input.StaffCode" class="form-label fw-semibold small"></label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="bi bi-person-vcard text-muted"></i></span>
+                            <input asp-for="Input.StaffCode" class="form-control font-monospace" maxlength="20" placeholder="VD: GV0123" />
+                        </div>
+                        <span asp-validation-for="Input.StaffCode" class="text-danger small"></span>
                     </div>
 
                     <div class="mb-3">
@@ -72,5 +113,36 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            const studentRadio = document.getElementById('regAsStudent');
+            const lecturerRadio = document.getElementById('regAsLecturer');
+            const studentGroup = document.getElementById('studentCodeGroup');
+            const staffGroup = document.getElementById('staffCodeGroup');
+            const notice = document.getElementById('lecturerNotice');
+            const studentInput = studentGroup.querySelector('input');
+            const staffInput = staffGroup.querySelector('input');
+
+            function toggleFields() {
+                const isLecturer = lecturerRadio.checked;
+                studentGroup.classList.toggle('d-none', isLecturer);
+                staffGroup.classList.toggle('d-none', !isLecturer);
+                notice.classList.toggle('d-none', !isLecturer);
+                studentInput.required = !isLecturer;
+                staffInput.required = isLecturer;
+                if (isLecturer) studentInput.value = ''; else staffInput.value = '';
+            }
+
+            studentInput.addEventListener('input', function () {
+                this.value = this.value.replace(/\D/g, '').slice(0, 10);
+            });
+            studentInput.pattern = '2\\d{9}';
+            studentInput.title = 'Mã sinh viên gồm 10 chữ số và bắt đầu bằng số 2';
+
+            studentRadio.addEventListener('change', toggleFields);
+            lecturerRadio.addEventListener('change', toggleFields);
+            toggleFields();
+        })();
+    </script>
 }
 

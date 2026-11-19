@@ -39,17 +39,28 @@ namespace DemoMVC.Controllers
                 .OrderBy(f => f.FacultyCode)
                 .ToListAsync();
 
+            var indexedFaculties = faculties
+                .Select((f, index) => new SttRowVM<Faculty>
+                {
+                    Stt = index + 1,
+                    Item = f
+                })
+                .ToList();
+
             if (!string.IsNullOrWhiteSpace(searchString))
             {
                 var keyword = searchString.Trim();
-                faculties = faculties.Where(f =>
-                    VietnameseTextHelper.ContainsMatch(f.FacultyId, keyword) ||
-                    VietnameseTextHelper.ContainsMatch(f.FacultyCode, keyword) ||
-                    VietnameseTextHelper.ContainsMatch(f.FacultyName, keyword))
+                bool hasStt = int.TryParse(keyword, out int searchStt) && searchStt > 0;
+
+                indexedFaculties = indexedFaculties.Where(x =>
+                    (hasStt && x.Stt == searchStt) ||
+                    VietnameseTextHelper.ContainsMatch(x.Item.FacultyId, keyword) ||
+                    VietnameseTextHelper.ContainsMatch(x.Item.FacultyCode, keyword) ||
+                    VietnameseTextHelper.ContainsMatch(x.Item.FacultyName, keyword))
                     .ToList();
             }
 
-            var paginatedFaculties = PaginatedList<Faculty>.Create(faculties, currentPageNumber, currentPageSize);
+            var paginatedFaculties = PaginatedList<SttRowVM<Faculty>>.Create(indexedFaculties, currentPageNumber, currentPageSize);
 
             if (Request.IsAjaxRequest())
             {
@@ -283,10 +294,16 @@ namespace DemoMVC.Controllers
             if (!string.IsNullOrWhiteSpace(searchString))
             {
                 var keyword = searchString.Trim();
-                faculties = faculties.Where(f =>
-                    VietnameseTextHelper.ContainsMatch(f.FacultyId, keyword) ||
-                    VietnameseTextHelper.ContainsMatch(f.FacultyCode, keyword) ||
-                    VietnameseTextHelper.ContainsMatch(f.FacultyName, keyword))
+                bool hasStt = int.TryParse(keyword, out int searchStt) && searchStt > 0;
+
+                faculties = faculties
+                    .Select((f, index) => new { Stt = index + 1, Item = f })
+                    .Where(x =>
+                        (hasStt && x.Stt == searchStt) ||
+                        VietnameseTextHelper.ContainsMatch(x.Item.FacultyId, keyword) ||
+                        VietnameseTextHelper.ContainsMatch(x.Item.FacultyCode, keyword) ||
+                        VietnameseTextHelper.ContainsMatch(x.Item.FacultyName, keyword))
+                    .Select(x => x.Item)
                     .ToList();
             }
 
@@ -583,84 +600,146 @@ namespace DemoMVC.Controllers
 
                 var worksheet = workbook.Worksheet(1);
                 var rows = worksheet.RowsUsed().Skip(1);
+                var asciiCodeWithLetterRegex = new Regex(@"^(?=.*[A-Za-z])[A-Za-z0-9_-]{1,10}$", RegexOptions.Compiled);
+                var shortIntRegex = new Regex(@"^[1-9]\d{0,3}$", RegexOptions.Compiled);
 
                 foreach (var row in rows)
                 {
                     int rowNumber = row.RowNumber();
-                    var col1 = row.Cell(1).GetFormattedString().Trim();
-                    var col2 = row.Cell(2).GetFormattedString().Trim();
-                    var col3 = row.Cell(3).GetFormattedString().Trim();
-                    var col4 = row.Cell(4).GetFormattedString().Trim();
+                    var usedCells = row.CellsUsed()
+                        .Select(c => c.GetFormattedString().Trim())
+                        .Where(v => !string.IsNullOrWhiteSpace(v))
+                        .ToList();
 
-                    if (string.IsNullOrWhiteSpace(col1) && string.IsNullOrWhiteSpace(col2) &&
-                        string.IsNullOrWhiteSpace(col3) && string.IsNullOrWhiteSpace(col4))
+                    if (usedCells.Count == 0)
                     {
                         continue;
                     }
 
                     preview.TotalDataRows++;
 
-                    string facultyId;
-                    string facultyCode;
-                    string facultyName;
+                    string? facultyId = null;
+                    string? facultyCode = null;
+                    string? facultyName = null;
+                    var twoDigitCandidates = new List<string>();
+                    var idCandidates = new List<string>();
+                    var nameCandidates = new List<string>();
 
-                    // Hỗ trợ cấu trúc 4 cột (STT | Mã Khoa | Mã ngành | Tên Khoa) và 3 cột (Mã Khoa | Mã ngành | Tên Khoa)
-                    if (int.TryParse(col1, out _) && !string.IsNullOrWhiteSpace(col4))
+                    // Tự động phân loại từng ô không rỗng trên dòng (không phụ thuộc thứ tự cột)
+                    foreach (var cellVal in usedCells)
                     {
-                        facultyId = col2.ToUpperInvariant();
-                        facultyCode = col3;
-                        facultyName = col4;
-                    }
-                    else
-                    {
-                        facultyId = col1.ToUpperInvariant();
-                        facultyCode = col2;
-                        facultyName = col3;
+                        if (FacultyCodeRegex.IsMatch(cellVal))
+                        {
+                            twoDigitCandidates.Add(cellVal);
+                            continue;
+                        }
+
+                        if (shortIntRegex.IsMatch(cellVal))
+                        {
+                            // STT ngắn (1-4 chữ số, không bắt đầu bằng 0 và khác 2 chữ số mã ngành)
+                            continue;
+                        }
+
+                        if (asciiCodeWithLetterRegex.IsMatch(cellVal))
+                        {
+                            idCandidates.Add(cellVal.ToUpperInvariant());
+                            continue;
+                        }
+
+                        if (cellVal.Any(char.IsLetter))
+                        {
+                            nameCandidates.Add(cellVal);
+                        }
                     }
 
+                    // Chọn FacultyCode (nếu có nhiều số 2 chữ số do STT >= 10 trùng, ưu tiên số đứng sau hoặc bắt đầu bằng '0')
+                    if (twoDigitCandidates.Count == 1)
+                    {
+                        facultyCode = twoDigitCandidates[0];
+                    }
+                    else if (twoDigitCandidates.Count > 1)
+                    {
+                        var zeroPrefixed = twoDigitCandidates.FirstOrDefault(c => c.StartsWith('0'));
+                        facultyCode = zeroPrefixed ?? twoDigitCandidates[^1];
+                    }
+
+                    // Chọn FacultyId & FacultyName
+                    if (idCandidates.Count > 0)
+                    {
+                        // Nếu có cả 1 mã ngắn (CNTT, MO...) và có thể tên khoa không dấu, ưu tiên mã ngắn nhất / toàn chữ hoa làm FacultyId
+                        var sortedIds = idCandidates
+                            .OrderBy(c => c.Length)
+                            .ThenBy(c => c, StringComparer.Ordinal)
+                            .ToList();
+                        facultyId = sortedIds[0];
+                        for (int k = 1; k < sortedIds.Count; k++)
+                        {
+                            nameCandidates.Add(sortedIds[k]);
+                        }
+                    }
+
+                    if (nameCandidates.Count > 0)
+                    {
+                        facultyName = nameCandidates
+                            .OrderByDescending(n => n.Contains(' '))
+                            .ThenByDescending(n => n.Length)
+                            .First();
+                    }
+
+                    var rowIssues = new List<string>();
                     if (string.IsNullOrWhiteSpace(facultyId) || !FacultyIdRegex.IsMatch(facultyId))
                     {
-                        AddSampleError(preview, $"Dòng {rowNumber}: Mã Khoa '{facultyId}' không hợp lệ (tối đa 10 ký tự chữ/số không dấu, không khoảng trắng).");
-                        continue;
+                        rowIssues.Add($"Thiếu/sai Mã Khoa ('{facultyId ?? "trống"}', tối đa 10 ký tự chữ/số không dấu)");
                     }
-
-                    if (!FacultyCodeRegex.IsMatch(facultyCode))
+                    if (string.IsNullOrWhiteSpace(facultyCode) || !FacultyCodeRegex.IsMatch(facultyCode))
                     {
-                        AddSampleError(preview, $"Dòng {rowNumber} (Khoa {facultyId}): Mã số ngành '{facultyCode}' phải gồm đúng 2 chữ số (VD: 01, 05, 10).");
-                        continue;
+                        rowIssues.Add($"Thiếu/sai Mã số ngành 2 chữ số ('{facultyCode ?? "trống"}')");
                     }
-
                     if (string.IsNullOrWhiteSpace(facultyName) || facultyName.Length > 150)
                     {
-                        AddSampleError(preview, $"Dòng {rowNumber} (Khoa {facultyId}): Tên Khoa không được để trống và tối đa 150 ký tự.");
-                        continue;
+                        rowIssues.Add("Thiếu/sai Tên Khoa (tối đa 150 ký tự)");
                     }
 
-                    if (!seenIdsInFile.Add(facultyId))
+                    if (rowIssues.Count == 0)
                     {
-                        AddSampleError(preview, $"Dòng {rowNumber}: Mã Khoa '{facultyId}' bị trùng lặp ngay trong file Excel.");
-                        continue;
+                        if (!seenIdsInFile.Add(facultyId!))
+                        {
+                            rowIssues.Add($"Mã Khoa '{facultyId}' bị trùng lặp trong cùng file Excel");
+                        }
+                        else if (seenCodeToIdInFile.TryGetValue(facultyCode!, out var otherInFile) &&
+                            !string.Equals(otherInFile, facultyId, StringComparison.OrdinalIgnoreCase))
+                        {
+                            rowIssues.Add($"Mã số ngành '{facultyCode}' trùng với Khoa '{otherInFile}' trong file Excel");
+                        }
+                        else if (existingCodeToId.TryGetValue(facultyCode!, out var otherInDb) &&
+                            !string.Equals(otherInDb, facultyId, StringComparison.OrdinalIgnoreCase))
+                        {
+                            rowIssues.Add($"Mã số ngành '{facultyCode}' đã thuộc về Khoa '{otherInDb}' trong CSDL");
+                        }
                     }
 
-                    if (seenCodeToIdInFile.TryGetValue(facultyCode, out var otherInFile) &&
-                        !string.Equals(otherInFile, facultyId, StringComparison.OrdinalIgnoreCase))
+                    if (rowIssues.Count > 0)
                     {
-                        AddSampleError(preview, $"Dòng {rowNumber}: Mã số ngành '{facultyCode}' trùng với Khoa '{otherInFile}' trong file Excel.");
+                        var issueText = string.Join("; ", rowIssues);
+                        AddSampleError(preview, $"Dòng {rowNumber}: {issueText}.");
+                        AddPreviewRow(preview, new ExcelPreviewRowVM
+                        {
+                            RowNumber = rowNumber,
+                            PrimaryKey = facultyId,
+                            Col2 = facultyCode,
+                            Col3 = facultyName,
+                            Status = "Lỗi",
+                            WarningMessage = issueText
+                        });
                         continue;
                     }
 
-                    if (existingCodeToId.TryGetValue(facultyCode, out var otherInDb) &&
-                        !string.Equals(otherInDb, facultyId, StringComparison.OrdinalIgnoreCase))
-                    {
-                        AddSampleError(preview, $"Dòng {rowNumber}: Mã số ngành '{facultyCode}' đã thuộc về Khoa '{otherInDb}' trong hệ thống.");
-                        continue;
-                    }
-
-                    seenCodeToIdInFile[facultyCode] = facultyId;
-                    validRows.Add(new ParsedFacultyRow(facultyId, facultyCode, facultyName));
+                    seenCodeToIdInFile[facultyCode!] = facultyId!;
+                    validRows.Add(new ParsedFacultyRow(facultyId!, facultyCode!, facultyName!));
                     preview.ValidRows++;
 
-                    if (existingIdSet.Contains(facultyId))
+                    bool isDup = existingIdSet.Contains(facultyId!);
+                    if (isDup)
                     {
                         preview.DuplicateCount++;
                         if (preview.SampleDuplicateIds.Count < 10)
@@ -672,6 +751,16 @@ namespace DemoMVC.Controllers
                     {
                         preview.NewCount++;
                     }
+
+                    AddPreviewRow(preview, new ExcelPreviewRowVM
+                    {
+                        RowNumber = rowNumber,
+                        PrimaryKey = facultyId,
+                        Col2 = facultyCode,
+                        Col3 = facultyName,
+                        Status = isDup ? "Trùng mã" : "Mới",
+                        WarningMessage = isDup ? "Đã tồn tại trong CSDL" : null
+                    });
                 }
 
                 preview.Success = true;
@@ -691,6 +780,14 @@ namespace DemoMVC.Controllers
             if (preview.SampleErrors.Count < 10)
             {
                 preview.SampleErrors.Add(message);
+            }
+        }
+
+        private static void AddPreviewRow(ExcelImportPreviewVM preview, ExcelPreviewRowVM row)
+        {
+            if (preview.PreviewRows.Count < 100)
+            {
+                preview.PreviewRows.Add(row);
             }
         }
     }

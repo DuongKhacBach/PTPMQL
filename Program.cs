@@ -214,9 +214,20 @@ static async Task SeedRolesAndUsersAsync(IServiceProvider serviceProvider, ILogg
             }
         }
 
-        // Seed RoleClaims mặc định vào AspNetRoleClaims nếu Role chưa có Permission claim nào
+        // Seed RoleClaims mặc định vào AspNetRoleClaims nếu Role chưa có Permission claim nào;
+        // Riêng Role Admin luôn được đảm bảo có đủ mọi Permission mới bổ sung
         var existingClaims = await roleManager.GetClaimsAsync(role);
-        if (!existingClaims.Any(c => c.Type == SystemPermissions.ClaimType))
+        if (roleName == "Admin")
+        {
+            foreach (var permission in SystemPermissions.GetDefaultPermissionsForRole("Admin"))
+            {
+                if (!existingClaims.Any(c => c.Type == SystemPermissions.ClaimType && c.Value == permission))
+                {
+                    await roleManager.AddClaimAsync(role, new Claim(SystemPermissions.ClaimType, permission));
+                }
+            }
+        }
+        else if (!existingClaims.Any(c => c.Type == SystemPermissions.ClaimType))
         {
             var defaultPermissions = SystemPermissions.GetDefaultPermissionsForRole(roleName);
             foreach (var permission in defaultPermissions)
@@ -228,11 +239,11 @@ static async Task SeedRolesAndUsersAsync(IServiceProvider serviceProvider, ILogg
         }
     }
 
-    var seedUsers = new (string Email, string Password, string FullName, string Role)[]
+    var seedUsers = new (string Email, string Password, string FullName, string Role, string UserType, string? StudentCode, string? StaffCode)[]
     {
-        ("admin@humg.edu.vn", "Admin1234", "Quản trị viên", "Admin"),
-        ("giangvien@humg.edu.vn", "Giangvien123", "Giảng viên HUMG", "GiangVien"),
-        ("sinhvien@humg.edu.vn", "Sinhvien123", "Sinh viên HUMG", "SinhVien")
+        ("admin@humg.edu.vn", "Admin1234", "Quản trị viên", "Admin", "Admin", null, "CB0001"),
+        ("giangvien@humg.edu.vn", "Giangvien123", "Giảng viên HUMG", "GiangVien", "GiangVien", null, "GV0001"),
+        ("sinhvien@humg.edu.vn", "Sinhvien123", "Sinh viên HUMG", "SinhVien", "SinhVien", "2521051005", null)
     };
 
     foreach (var item in seedUsers)
@@ -245,6 +256,10 @@ static async Task SeedRolesAndUsersAsync(IServiceProvider serviceProvider, ILogg
                 UserName = item.Email,
                 Email = item.Email,
                 FullName = item.FullName,
+                UserType = item.UserType,
+                StudentCode = item.StudentCode,
+                StaffCode = item.StaffCode,
+                IsApproved = true,
                 EmailConfirmed = true
             };
             var createResult = await userManager.CreateAsync(user, item.Password);
@@ -255,9 +270,34 @@ static async Task SeedRolesAndUsersAsync(IServiceProvider serviceProvider, ILogg
         }
         else
         {
+            bool needsUpdate = false;
             if (!user.EmailConfirmed)
             {
                 user.EmailConfirmed = true;
+                needsUpdate = true;
+            }
+            if (user.UserType != item.UserType)
+            {
+                user.UserType = item.UserType;
+                needsUpdate = true;
+            }
+            if (!user.IsApproved)
+            {
+                user.IsApproved = true;
+                needsUpdate = true;
+            }
+            if (string.IsNullOrWhiteSpace(user.StudentCode) && item.StudentCode != null)
+            {
+                user.StudentCode = item.StudentCode;
+                needsUpdate = true;
+            }
+            if (string.IsNullOrWhiteSpace(user.StaffCode) && item.StaffCode != null)
+            {
+                user.StaffCode = item.StaffCode;
+                needsUpdate = true;
+            }
+            if (needsUpdate)
+            {
                 await userManager.UpdateAsync(user);
             }
             if (!await userManager.IsInRoleAsync(user, item.Role))
@@ -265,5 +305,19 @@ static async Task SeedRolesAndUsersAsync(IServiceProvider serviceProvider, ILogg
                 await userManager.AddToRoleAsync(user, item.Role);
             }
         }
+    }
+
+    // Chuẩn hóa dữ liệu cũ (tài khoản tạo trước migration Add_User_RoleType_And_Approval có UserType rỗng):
+    // suy ra tư cách từ Role hiện có và đánh dấu đã duyệt để không bị chặn đăng nhập
+    var legacyUsers = userManager.Users.Where(u => u.UserType == null || u.UserType == "").ToList();
+    foreach (var legacy in legacyUsers)
+    {
+        var legacyRoles = await userManager.GetRolesAsync(legacy);
+        legacy.UserType = legacyRoles.Contains("Admin") ? "Admin"
+                        : legacyRoles.Contains("GiangVien") ? "GiangVien"
+                        : "SinhVien";
+        legacy.IsApproved = true;
+        await userManager.UpdateAsync(legacy);
+        logger.LogInformation("Đã chuẩn hóa tư cách tài khoản cũ {Email} => {UserType}", legacy.Email, legacy.UserType);
     }
 }

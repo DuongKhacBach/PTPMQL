@@ -417,6 +417,27 @@ Stop-Process -Name "DemoMVC","dotnet" -Force -ErrorAction SilentlyContinue
 
 --------------------------------------------------------------------------------
 
+[NÂNG CẤP 3 NHÓM TÍNH NĂNG NÂNG CAO: CỘT STT, NHẬP EXCEL TỰ NHẬN DIỆN CỘT & PHÂN LOẠI TƯ CÁCH TÀI KHOẢN]
+- Ngày cập nhật: 19/11/2026
+- Nội dung tóm tắt:
+  + 1. Bổ sung cột STT & Tìm kiếm theo STT cho tất cả 4 bảng dữ liệu (Student, Faculty, Account, Role):
+    * Tạo Models/ViewModels/SttRowVM.cs và bổ sung thuộc tính int Stt vào UserWithRoleVM, RoleListItemVM.
+    * Đánh số thứ tự STT liên tục từ 1..N sau khi sắp xếp/lọc theo danh mục nhưng trước khi tìm kiếm từ khóa và phân trang (giữ nguyên STT gốc khi chuyển trang hoặc lọc từ khóa).
+    * Hỗ trợ tìm kiếm theo số STT kết hợp (||) với tìm kiếm văn bản/mã (VD: gõ "5" vừa trả về dòng STT 5 vừa trả về các mã có chứa số 5).
+    * Hiển thị cột STT căn giữa (width: 70px) ở đầu tất cả các bảng và file xuất Excel.
+  + 2. Tự động nhận diện & điều chỉnh đúng cột khi nhập file Excel (Student & Faculty ImportExcel):
+    * Quét toàn bộ các ô không rỗng trên từng dòng dữ liệu và tự động phân loại theo quy luật định dạng mà không phụ thuộc thứ tự cột cố định:
+      - Student: Mã SV (^2\d{7,11}$), SĐT (^0\d{8,10}$ hoặc 9 số tự bù số 0 đầu), Mã Khoa / Mã ngành 2 số / Tên Khoa (có dấu hoặc không dấu), STT ngắn và Họ tên. Tự động suy luận Khoa từ 2 chữ số ngành (vị trí index 4, độ dài 2) trong Mã SV 10 số nếu cột Khoa bị bỏ trống.
+      - Faculty: Tự động phân biệt Mã Khoa (chữ in hoa ngắn), Mã ngành (2 chữ số 01..99) và Tên Khoa (chuỗi tiếng Việt có khoảng trắng).
+    * Hiển thị bảng Xem trước dữ liệu đã tự động nhận diện cột (PreviewRows) ngay trong Modal Import Excel kèm trạng thái (Mới / Trùng mã / Lỗi) và cảnh báo chi tiết từng trường thiếu.
+  + 3. Phân loại Đăng ký/Đăng nhập theo Tư cách (Sinh viên vs Giảng viên) & Duyệt Giảng viên / Xóa Tài khoản Sinh viên:
+    * Mở rộng ApplicationUser thêm 4 trường: UserType ("Admin", "GiangVien", "SinhVien"), StudentCode, StaffCode, IsApproved; tạo và cập nhật migration Add_User_RoleType_And_Approval.
+    * Trang Đăng ký (Register): Chọn tư cách "Sinh viên" (nhập Mã SV 10 số bắt đầu bằng 2, tự động duyệt & gán Role SinhVien) hoặc "Giảng viên / Cán bộ" (nhập Mã cán bộ, IsApproved = false, chờ Admin phê duyệt).
+    * Trang Đăng nhập (Login): Chọn tư cách đăng nhập ("Sinh viên" hoặc "Giảng viên / Quản trị"), chặn tài khoản Giảng viên chưa được Admin duyệt và kiểm tra khớp tư cách đăng nhập với Role thực tế.
+    * Quản lý Tài khoản (AccountController): Thêm 2 quyền động Account.Approve và Account.Delete (tự động seed cho Role Admin); bổ sung chức năng "Duyệt Giảng viên" (ApproveLecturer) và "Xóa tài khoản Sinh viên" (Delete - bảo vệ tuyệt đối tài khoản Admin, Giảng viên đã duyệt và tài khoản đang đăng nhập) qua AJAX Modal.
+
+--------------------------------------------------------------------------------
+
 [MẸO ĐẨY CODE LÊN GITHUB NHANH]
 1. Dùng lệnh `git up` (Nhanh và tiện nhất - áp dụng cho mọi dự án trên máy):
    - Đẩy nhanh (mặc định ghi chú là "Update code"):
