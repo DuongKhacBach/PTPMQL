@@ -1,9 +1,12 @@
 using System.Security.Claims;
+using System.Text.Encodings.Web;
+using System.Text.Unicode;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.WebEncoders;
 using DemoMVC.Data;
 using DemoMVC.Models;
 using DemoMVC.Models.Process;
@@ -15,12 +18,22 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")
         ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found."));
-    options.ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning));
 });
 
 // Đăng ký dịch vụ MVC Controllers with Views & Razor Pages
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
+
+// Xuất ký tự tiếng Việt UTF-8 trực tiếp trong HTML (vẫn giữ nguyên mã hóa chống XSS cho <, >, &, ", ')
+builder.Services.Configure<WebEncoderOptions>(options =>
+{
+    options.TextEncoderSettings = new TextEncoderSettings(
+        UnicodeRanges.BasicLatin,
+        UnicodeRanges.Latin1Supplement,
+        UnicodeRanges.LatinExtendedA,
+        UnicodeRanges.LatinExtendedB,
+        UnicodeRanges.LatinExtendedAdditional);
+});
 
 // Cấu hình gửi Email qua MailKit (STT 13)
 builder.Services.AddOptions();
@@ -70,7 +83,7 @@ builder.Services.AddAuthorization(options =>
     }
 });
 
-// Cấu hình Cookie xác thực an toàn (tương thích cả HTTP và HTTPS)
+// Cấu hình Cookie xác thực an toàn (tương thích cả HTTP trên MonsterASP FreeSite và HTTPS)
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.Cookie.HttpOnly = true;
@@ -82,9 +95,11 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.SlidingExpiration = true;
 });
 
-// Cấu hình DataProtection lưu key tại ./keys
+// Cấu hình DataProtection lưu key theo ContentRootPath (ổn định trên cả Local và IIS/MonsterASP)
+var keysDir = Path.Combine(builder.Environment.ContentRootPath, "keys");
+Directory.CreateDirectory(keysDir);
 builder.Services.AddDataProtection()
-    .PersistKeysToFileSystem(new DirectoryInfo(@"./keys"))
+    .PersistKeysToFileSystem(new DirectoryInfo(keysDir))
     .SetApplicationName("DemoMVC")
     .SetDefaultKeyLifetime(TimeSpan.FromDays(14));
 
@@ -102,7 +117,7 @@ using (var scope = app.Services.CreateScope())
         await SeedRolesAndUsersAsync(services, logger);
         await DemoMVC.Controllers.StudentController.FixInvalidPhoneNumbersAsync(dbContext);
 
-        var sampleExcelPath = Path.Combine(Directory.GetCurrentDirectory(), "DanhSach_100_SinhVien_HUMG.xlsx");
+        var sampleExcelPath = Path.Combine(app.Environment.ContentRootPath, "DanhSach_100_SinhVien_HUMG.xlsx");
         if (!File.Exists(sampleExcelPath))
         {
             using var sampleWorkbook = await DemoMVC.Controllers.StudentController.BuildSample100StudentsWorkbookAsync(dbContext);
@@ -121,8 +136,35 @@ if (!app.Environment.IsDevelopment())
     app.UseExceptionHandler("/Home/Error");
     app.UseHsts();
 }
+else
+{
+    app.UseHttpsRedirection();
+}
 
-app.UseHttpsRedirection();
+// Security Response Headers cơ bản
+app.Use(async (context, next) =>
+{
+    context.Response.Headers.TryAdd("X-Content-Type-Options", "nosniff");
+    context.Response.Headers.TryAdd("X-Frame-Options", "SAMEORIGIN");
+    context.Response.Headers.TryAdd("Referrer-Policy", "strict-origin-when-cross-origin");
+    await next();
+});
+
+// Trang báo lỗi thân thiện (404/403/400) cho truy cập URL thông thường (tắt với request AJAX để giữ nguyên HTTP status code)
+app.UseStatusCodePagesWithReExecute("/Home/StatusCode", "?code={0}");
+app.Use(async (context, next) =>
+{
+    if (context.Request.IsAjaxRequest())
+    {
+        var statusCodeFeature = context.Features.Get<IStatusCodePagesFeature>();
+        if (statusCodeFeature != null)
+        {
+            statusCodeFeature.Enabled = false;
+        }
+    }
+    await next();
+});
+
 app.UseStaticFiles();
 
 app.UseRouting();

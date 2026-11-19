@@ -52,15 +52,6 @@ namespace DemoMVC.Controllers
 
             var usersQuery = _userManager.Users.AsNoTracking().AsQueryable();
 
-            if (!string.IsNullOrWhiteSpace(searchString))
-            {
-                var keyword = searchString.Trim();
-                usersQuery = usersQuery.Where(u =>
-                    (u.FullName != null && u.FullName.Contains(keyword)) ||
-                    (u.Email != null && u.Email.Contains(keyword)) ||
-                    (u.UserName != null && u.UserName.Contains(keyword)));
-            }
-
             if (!string.IsNullOrWhiteSpace(roleFilter))
             {
                 var normalizedRole = roleFilter.Trim();
@@ -71,8 +62,19 @@ namespace DemoMVC.Controllers
                 usersQuery = usersQuery.Where(u => userIdsInRole.Contains(u.Id));
             }
 
-            var orderedUsers = usersQuery.OrderBy(u => u.Email);
-            var pagedUsers = await PaginatedList<ApplicationUser>.CreateAsync(orderedUsers, currentPageNumber, currentPageSize);
+            var usersList = await usersQuery.OrderBy(u => u.Email).ToListAsync();
+
+            if (!string.IsNullOrWhiteSpace(searchString))
+            {
+                var keyword = searchString.Trim();
+                usersList = usersList.Where(u =>
+                    VietnameseTextHelper.ContainsMatch(u.FullName, keyword) ||
+                    VietnameseTextHelper.ContainsMatch(u.Email, keyword) ||
+                    VietnameseTextHelper.ContainsMatch(u.UserName, keyword))
+                    .ToList();
+            }
+
+            var pagedUsers = PaginatedList<ApplicationUser>.Create(usersList, currentPageNumber, currentPageSize);
 
             // Chỉ truy vấn Role của các User trong trang hiện tại (1 truy vấn duy nhất, không N+1)
             var pagedUserIds = pagedUsers.Select(u => u.Id).ToList();
@@ -150,7 +152,32 @@ namespace DemoMVC.Controllers
             if (user == null) return NotFound();
 
             var userRoles = await _userManager.GetRolesAsync(user);
-            var selectedRoles = model.SelectedRoles ?? new List<string>();
+            var validRoleNames = (await _roleManager.Roles
+                .AsNoTracking()
+                .Where(r => r.Name != null)
+                .Select(r => r.Name!)
+                .ToListAsync())
+                .ToHashSet(StringComparer.Ordinal);
+
+            var selectedRoles = (model.SelectedRoles ?? new List<string>())
+                .Where(r => validRoleNames.Contains(r))
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+
+            // Chống tự gỡ vai trò Admin khỏi chính tài khoản đang đăng nhập
+            var currentUserId = _userManager.GetUserId(User);
+            if (user.Id == currentUserId &&
+                userRoles.Contains("Admin") &&
+                !selectedRoles.Contains("Admin"))
+            {
+                const string selfLockMsg = "Bạn không thể tự gỡ vai trò 'Admin' khỏi chính tài khoản đang đăng nhập.";
+                if (Request.IsAjaxRequest())
+                {
+                    return Json(new { success = false, message = selfLockMsg });
+                }
+                TempData["ErrorMessage"] = selfLockMsg;
+                return RedirectToAction(nameof(Index));
+            }
 
             var rolesToAdd = selectedRoles.Except(userRoles).ToList();
             var rolesToRemove = userRoles.Except(selectedRoles).ToList();

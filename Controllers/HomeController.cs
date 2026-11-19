@@ -16,6 +16,14 @@ namespace DemoMVC.Controllers
             return View();
         }
 
+        [Route("Home/StatusCode")]
+        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+        public IActionResult StatusCodePage(int? code)
+        {
+            ViewData["StatusCode"] = code ?? 404;
+            return View("StatusCode");
+        }
+
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
         {

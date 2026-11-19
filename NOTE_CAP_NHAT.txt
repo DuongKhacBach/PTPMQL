@@ -396,6 +396,27 @@ Stop-Process -Name "DemoMVC","dotnet" -Force -ErrorAction SilentlyContinue
 
 --------------------------------------------------------------------------------
 
+[TỔNG RÀ SOÁT & TỐI ƯU CHUẨN MASTER (STT 1 - 15)]
+- Ngày cập nhật: 19/11/2026
+- Nội dung tóm tắt:
+  + 1. Làm sạch NuGet & đạt chuẩn Build 0 Error / 0 Warning:
+    * Gỡ 2 gói không sử dụng trong DemoMVC.csproj (Microsoft.EntityFrameworkCore.SqlServer và Microsoft.VisualStudio.Web.CodeGeneration.Design).
+    * Loại bỏ hoàn toàn 8 cảnh báo lỗ hổng bảo mật NuGet (NU1901, NU1902, NU1903), giảm dung lượng thư mục publish giúp CI/CD deploy nhanh hơn lên MonsterASP.NET.
+    * Thêm appsettings.Production.json vào .gitignore và cấu hình UserSecretsId để lưu Gmail + App Password an toàn tuyệt đối ở Local (User Secrets) và MonsterASP.NET (wwwroot/appsettings.Production.json).
+  + 2. Khắc phục triệt để lỗi tìm kiếm phân biệt hoa/thường & dấu tiếng Việt trên SQLite:
+    * Tạo Models/Process/VietnameseTextHelper.cs (chuẩn DRY) dùng CultureInfo("vi-VN") và chuẩn hóa Unicode bỏ dấu.
+    * Áp dụng cho cả 4 Controller (Student, Faculty, Role, Account): gõ chữ thường/hoa hoặc không dấu (VD: "nguyễn", "nguyen", "cntt", "dia chat", "quan tri", "ADMIN") đều tìm chính xác 100%.
+  + 3. Gia cố bảo mật chống tự khóa quyền quản trị (Anti-Lockout) & HTTP Security Headers:
+    * RoleController: chặn xóa/đổi tên vai trò hệ thống 'Admin' và bắt buộc giữ 2 quyền lõi 'Role.Index' + 'Role.AssignClaim' trên Role 'Admin'.
+    * AccountController: xác thực danh sách Role hợp lệ trước khi gán và chặn Admin tự gỡ vai trò 'Admin' khỏi chính tài khoản đang đăng nhập.
+    * Program.cs: thêm Security Headers (X-Content-Type-Options: nosniff, X-Frame-Options: SAMEORIGIN, Referrer-Policy), cấu hình WebEncoderOptions xuất UTF-8 tiếng Việt sạch trong HTML, dùng ContentRootPath ổn định trên IIS/MonsterASP, bỏ cảnh báo HTTPS redirect ở Production HTTP và tối ưu FixInvalidPhoneNumbersAsync bằng AsNoTracking().
+  + 4. Hoàn thiện trang báo lỗi URL tiếng Việt (STT 4) & AJAX Modal nâng cao:
+    * Tạo HomeController.StatusCodePage + Views/Home/StatusCode.cshtml (trang 404/403/400/500 Bootstrap 5 tiếng Việt) và Việt hóa Views/Shared/Error.cshtml; dùng IStatusCodePagesFeature tắt trang lỗi HTML với request AJAX để giữ nguyên status code gốc.
+    * Nâng cấp wwwroot/js/crud-modal.js xử lý mượt HTTP 400 (hết phiên AntiForgeryToken) / 500 và tự động focus ô nhập liệu đầu tiên khi mở Modal.
+  + 5. Kiểm thử tổng thể đạt 100% PASS (Debug + Release Publish + Development + Production + Hosting Live http://duongkhacbach.runasp.net/).
+
+--------------------------------------------------------------------------------
+
 [MẸO ĐẨY CODE LÊN GITHUB NHANH]
 1. Dùng lệnh `git up` (Nhanh và tiện nhất - áp dụng cho mọi dự án trên máy):
    - Đẩy nhanh (mặc định ghi chú là "Update code"):

@@ -33,22 +33,23 @@ namespace DemoMVC.Controllers
             ViewData["CurrentFilter"] = searchString;
             ViewData["CurrentPageSize"] = currentPageSize;
 
-            var query = _context.Faculty
+            var faculties = await _context.Faculty
                 .Include(f => f.Students)
                 .AsNoTracking()
-                .AsQueryable();
+                .OrderBy(f => f.FacultyCode)
+                .ToListAsync();
 
             if (!string.IsNullOrWhiteSpace(searchString))
             {
                 var keyword = searchString.Trim();
-                query = query.Where(f => f.FacultyId.Contains(keyword)
-                                      || f.FacultyCode.Contains(keyword)
-                                      || f.FacultyName.Contains(keyword));
+                faculties = faculties.Where(f =>
+                    VietnameseTextHelper.ContainsMatch(f.FacultyId, keyword) ||
+                    VietnameseTextHelper.ContainsMatch(f.FacultyCode, keyword) ||
+                    VietnameseTextHelper.ContainsMatch(f.FacultyName, keyword))
+                    .ToList();
             }
 
-            query = query.OrderBy(f => f.FacultyCode);
-
-            var paginatedFaculties = await PaginatedList<Faculty>.CreateAsync(query, currentPageNumber, currentPageSize);
+            var paginatedFaculties = PaginatedList<Faculty>.Create(faculties, currentPageNumber, currentPageSize);
 
             if (Request.IsAjaxRequest())
             {
@@ -273,20 +274,21 @@ namespace DemoMVC.Controllers
         [Authorize(Policy = SystemPermissions.Faculty.ExportExcel)]
         public async Task<IActionResult> ExportExcel(string? searchString)
         {
-            var query = _context.Faculty
+            var faculties = await _context.Faculty
                 .Include(f => f.Students)
                 .AsNoTracking()
-                .AsQueryable();
+                .OrderBy(f => f.FacultyCode)
+                .ToListAsync();
 
             if (!string.IsNullOrWhiteSpace(searchString))
             {
                 var keyword = searchString.Trim();
-                query = query.Where(f => f.FacultyId.Contains(keyword)
-                                      || f.FacultyCode.Contains(keyword)
-                                      || f.FacultyName.Contains(keyword));
+                faculties = faculties.Where(f =>
+                    VietnameseTextHelper.ContainsMatch(f.FacultyId, keyword) ||
+                    VietnameseTextHelper.ContainsMatch(f.FacultyCode, keyword) ||
+                    VietnameseTextHelper.ContainsMatch(f.FacultyName, keyword))
+                    .ToList();
             }
-
-            var faculties = await query.OrderBy(f => f.FacultyCode).ToListAsync();
 
             using var workbook = new XLWorkbook();
             var worksheet = workbook.Worksheets.Add("DanhSachKhoa");

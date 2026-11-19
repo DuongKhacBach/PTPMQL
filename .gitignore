@@ -15,6 +15,7 @@ publish/
 publish.zip
 keys/
 mailsSave/
+appsettings.Production.json
 
 ## SQLite Temp & Backup Files
 *.db-shm

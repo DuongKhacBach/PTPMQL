@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text.RegularExpressions;
 using ClosedXML.Excel;
 using Microsoft.AspNetCore.Authorization;
@@ -16,7 +15,6 @@ namespace DemoMVC.Controllers
     public class StudentController : Controller
     {
         private readonly ApplicationDbContext _context;
-        private static readonly StringComparer VietnameseComparer = StringComparer.Create(new CultureInfo("vi-VN"), ignoreCase: true);
 
         public StudentController(ApplicationDbContext context)
         {
@@ -580,46 +578,42 @@ namespace DemoMVC.Controllers
                 query = query.Where(s => s.FacultyId == fac);
             }
 
+            var list = await query.ToListAsync();
+
+            // Lọc tìm kiếm tiếng Việt không phân biệt hoa/thường & hỗ trợ gõ không dấu (khắc phục instr() phân biệt hoa/thường của SQLite)
             if (!string.IsNullOrWhiteSpace(searchString))
             {
                 var search = searchString.Trim();
-                query = query.Where(s => (s.FullName != null && s.FullName.Contains(search))
-                                      || (s.StudentId != null && s.StudentId.Contains(search))
-                                      || (s.Faculty != null && s.Faculty.FacultyName.Contains(search))
-                                      || (s.PhoneNumber != null && s.PhoneNumber.Contains(search)));
+                list = list.Where(s =>
+                    VietnameseTextHelper.ContainsMatch(s.FullName, search) ||
+                    VietnameseTextHelper.ContainsMatch(s.StudentId, search) ||
+                    VietnameseTextHelper.ContainsMatch(s.Faculty?.FacultyName, search) ||
+                    VietnameseTextHelper.ContainsMatch(s.FacultyId, search) ||
+                    VietnameseTextHelper.ContainsMatch(s.PhoneNumber, search))
+                    .ToList();
             }
-
-            var list = await query.ToListAsync();
 
             return sortOrder switch
             {
                 "name_desc" => list
-                    .OrderByDescending(s => GetGivenName(s.FullName), VietnameseComparer)
-                    .ThenByDescending(s => s.FullName ?? string.Empty, VietnameseComparer)
+                    .OrderByDescending(s => VietnameseTextHelper.GetGivenName(s.FullName), VietnameseTextHelper.VietnameseComparer)
+                    .ThenByDescending(s => s.FullName ?? string.Empty, VietnameseTextHelper.VietnameseComparer)
                     .ToList(),
                 "faculty_asc" => list
-                    .OrderBy(s => s.Faculty?.FacultyName ?? string.Empty, VietnameseComparer)
-                    .ThenBy(s => GetGivenName(s.FullName), VietnameseComparer)
+                    .OrderBy(s => s.Faculty?.FacultyName ?? string.Empty, VietnameseTextHelper.VietnameseComparer)
+                    .ThenBy(s => VietnameseTextHelper.GetGivenName(s.FullName), VietnameseTextHelper.VietnameseComparer)
                     .ToList(),
                 "faculty_desc" => list
-                    .OrderByDescending(s => s.Faculty?.FacultyName ?? string.Empty, VietnameseComparer)
-                    .ThenBy(s => GetGivenName(s.FullName), VietnameseComparer)
+                    .OrderByDescending(s => s.Faculty?.FacultyName ?? string.Empty, VietnameseTextHelper.VietnameseComparer)
+                    .ThenBy(s => VietnameseTextHelper.GetGivenName(s.FullName), VietnameseTextHelper.VietnameseComparer)
                     .ToList(),
                 "id_desc" => list.OrderByDescending(s => s.StudentId, StringComparer.OrdinalIgnoreCase).ToList(),
                 "id_asc" => list.OrderBy(s => s.StudentId, StringComparer.OrdinalIgnoreCase).ToList(),
                 _ => list
-                    .OrderBy(s => GetGivenName(s.FullName), VietnameseComparer)
-                    .ThenBy(s => s.FullName ?? string.Empty, VietnameseComparer)
+                    .OrderBy(s => VietnameseTextHelper.GetGivenName(s.FullName), VietnameseTextHelper.VietnameseComparer)
+                    .ThenBy(s => s.FullName ?? string.Empty, VietnameseTextHelper.VietnameseComparer)
                     .ToList()
             };
-        }
-
-        private static string GetGivenName(string? fullName)
-        {
-            if (string.IsNullOrWhiteSpace(fullName)) return string.Empty;
-            var trimmed = fullName.Trim();
-            int lastSpaceIndex = trimmed.LastIndexOf(' ');
-            return lastSpaceIndex >= 0 ? trimmed.Substring(lastSpaceIndex + 1) : trimmed;
         }
 
         // =======================================================
@@ -921,34 +915,46 @@ namespace DemoMVC.Controllers
 
         public static async Task FixInvalidPhoneNumbersAsync(ApplicationDbContext context)
         {
-            var students = await context.Student.ToListAsync();
-            bool hasChanges = false;
+            // Kiểm tra nhanh bằng AsNoTracking trước; chỉ load tracked entities khi thực sự có bản ghi cần chuẩn hóa
+            var snapshot = await context.Student
+                .AsNoTracking()
+                .Select(s => new { s.StudentId, s.PhoneNumber })
+                .ToListAsync();
 
-            foreach (var s in students)
+            var idsNeedingFix = new List<string>();
+            foreach (var item in snapshot)
+            {
+                var raw = item.PhoneNumber?.Trim() ?? string.Empty;
+                var digits = new string(raw.Where(char.IsDigit).ToArray());
+                if (digits.Length == 9) digits = "0" + digits;
+
+                if (!PhoneRegex.IsMatch(digits) || item.PhoneNumber != digits)
+                {
+                    if (!string.IsNullOrEmpty(item.StudentId))
+                    {
+                        idsNeedingFix.Add(item.StudentId);
+                    }
+                }
+            }
+
+            if (idsNeedingFix.Count == 0) return;
+
+            var studentsToFix = await context.Student
+                .Where(s => s.StudentId != null && idsNeedingFix.Contains(s.StudentId))
+                .ToListAsync();
+
+            foreach (var s in studentsToFix)
             {
                 var raw = s.PhoneNumber?.Trim() ?? string.Empty;
                 var digits = new string(raw.Where(char.IsDigit).ToArray());
-                if (digits.Length == 9)
-                {
-                    digits = "0" + digits;
-                }
+                if (digits.Length == 9) digits = "0" + digits;
 
-                if (!PhoneRegex.IsMatch(digits))
-                {
-                    s.PhoneNumber = GenerateDefaultPhoneNumber(s.StudentId);
-                    hasChanges = true;
-                }
-                else if (s.PhoneNumber != digits)
-                {
-                    s.PhoneNumber = digits;
-                    hasChanges = true;
-                }
+                s.PhoneNumber = PhoneRegex.IsMatch(digits)
+                    ? digits
+                    : GenerateDefaultPhoneNumber(s.StudentId);
             }
 
-            if (hasChanges)
-            {
-                await context.SaveChangesAsync();
-            }
+            await context.SaveChangesAsync();
         }
 
         private async Task<string> GenerateStudentIdAsync(string facultyId)

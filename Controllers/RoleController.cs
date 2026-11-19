@@ -41,14 +41,6 @@ namespace DemoMVC.Controllers
             ViewData["CurrentFilter"] = searchString;
             ViewData["CurrentPageSize"] = currentPageSize;
 
-            var rolesQuery = _roleManager.Roles.AsNoTracking().AsQueryable();
-
-            if (!string.IsNullOrWhiteSpace(searchString))
-            {
-                var keyword = searchString.Trim();
-                rolesQuery = rolesQuery.Where(r => r.Name != null && r.Name.Contains(keyword));
-            }
-
             var claimCounts = await _context.RoleClaims
                 .AsNoTracking()
                 .Where(rc => rc.ClaimType == SystemPermissions.ClaimType)
@@ -62,9 +54,16 @@ namespace DemoMVC.Controllers
                 .Select(g => new { RoleId = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(x => x.RoleId, x => x.Count);
 
-            var roles = await rolesQuery
+            var roles = await _roleManager.Roles
+                .AsNoTracking()
                 .OrderBy(r => r.Name)
                 .ToListAsync();
+
+            if (!string.IsNullOrWhiteSpace(searchString))
+            {
+                var keyword = searchString.Trim();
+                roles = roles.Where(r => VietnameseTextHelper.ContainsMatch(r.Name, keyword)).ToList();
+            }
 
             var roleItems = roles.Select(r => new RoleListItemVM
             {
@@ -169,6 +168,13 @@ namespace DemoMVC.Controllers
             }
 
             roleName = roleName.Trim();
+            if (string.Equals(role.Name, "Admin", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(roleName, "Admin", StringComparison.OrdinalIgnoreCase))
+            {
+                ModelState.AddModelError("roleName", "Không thể đổi tên vai trò hệ thống 'Admin'.");
+                return Request.IsAjaxRequest() ? PartialView("_EditModal", role) : View(role);
+            }
+
             var existingRole = await _roleManager.FindByNameAsync(roleName);
             if (existingRole != null && existingRole.Id != role.Id)
             {
@@ -230,6 +236,17 @@ namespace DemoMVC.Controllers
                 {
                     return Json(new { success = false, message = "Không tìm thấy Role cần xóa." });
                 }
+                return RedirectToAction(nameof(Index));
+            }
+
+            if (string.Equals(role.Name, "Admin", StringComparison.OrdinalIgnoreCase))
+            {
+                const string adminProtectedMsg = "Không thể xóa vai trò hệ thống 'Admin' để tránh mất quyền quản trị.";
+                if (Request.IsAjaxRequest())
+                {
+                    return Json(new { success = false, message = adminProtectedMsg });
+                }
+                TempData["ErrorMessage"] = adminProtectedMsg;
                 return RedirectToAction(nameof(Index));
             }
 
@@ -318,6 +335,20 @@ namespace DemoMVC.Controllers
                 .Where(c => c.Selected && validPermissions.Contains(c.Value))
                 .Select(c => c.Value)
                 .ToHashSet(StringComparer.Ordinal);
+
+            // Chống tự khóa quyền quản trị khi cấu hình Role Admin
+            if (string.Equals(role.Name, "Admin", StringComparison.OrdinalIgnoreCase) &&
+                (!selectedValues.Contains(SystemPermissions.Role.Index) ||
+                 !selectedValues.Contains(SystemPermissions.Role.AssignClaim)))
+            {
+                const string lockMsg = "Role 'Admin' bắt buộc phải giữ quyền 'Role.Index' và 'Role.AssignClaim' để tránh tự khóa quyền quản trị hệ thống.";
+                if (Request.IsAjaxRequest())
+                {
+                    return Json(new { success = false, message = lockMsg });
+                }
+                TempData["ErrorMessage"] = lockMsg;
+                return RedirectToAction(nameof(AssignClaim), new { roleId = role.Id });
+            }
 
             var existingClaims = await _roleManager.GetClaimsAsync(role);
             var existingPermissionClaims = existingClaims

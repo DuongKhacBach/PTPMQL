@@ -293,6 +293,24 @@
                 return;
             }
 
+            if (response.status === 400) {
+                showToast('Phiên làm việc hoặc mã xác thực form đã hết hạn. Vui lòng tải lại trang.', 'warning');
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalBtnHtml;
+                }
+                return;
+            }
+
+            if (response.status >= 500) {
+                showToast('Máy chủ gặp lỗi khi xử lý yêu cầu. Vui lòng thử lại sau.', 'danger');
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalBtnHtml;
+                }
+                return;
+            }
+
             const contentType = response.headers.get('content-type') || '';
             if (contentType.includes('application/json')) {
                 const data = await response.json();
@@ -341,6 +359,14 @@
         initStudentAutoIdForm(container);
         initPermissionMatrix(container);
         initImportExcelWorkflow(container);
+
+        // Tự động focus vào ô nhập liệu đầu tiên khi mở Modal (trừ trang document gốc)
+        if (container !== document) {
+            const firstInput = container.querySelector('input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([readonly]):not([disabled]), select:not([disabled])');
+            if (firstInput) {
+                setTimeout(() => firstInput.focus(), 120);
+            }
+        }
     }
 
     function reparseValidation(container) {
